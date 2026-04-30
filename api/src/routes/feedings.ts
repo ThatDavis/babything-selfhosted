@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, requireBabyAccess, AuthRequest } from '../middleware/auth.js'
 import { emitBabyEvent } from '../lib/socket.js'
+import { getTenantId } from '../lib/tenant-context.js'
 
 const router = Router({ mergeParams: true })
 
@@ -50,6 +51,7 @@ router.post('/', requireAuth, requireBabyAccess(), async (req, res) => {
       endedAt: result.data.endedAt ? new Date(result.data.endedAt) : undefined,
       babyId,
       loggedBy,
+      tenantId: getTenantId()!,
     },
     include: { user: { select: { id: true, name: true } } },
   })

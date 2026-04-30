@@ -7,6 +7,7 @@ import { sendTestEmail } from '../lib/mailer.js'
 import { AuthRequest } from '../middleware/auth.js'
 import { encryptOptional, decryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
+import { getTenantId } from '../lib/tenant-context.js'
 
 const router = Router()
 const guard = [requireAuth, requireAdmin]
@@ -22,17 +23,19 @@ function withStreamUrl(s: object) {
 }
 
 router.get('/settings', requireAuth, async (_req, res) => {
-  const settings = await prisma.systemSettings.findFirst()
-  res.json(withStreamUrl(settings ?? { id: 'default', unitSystem: 'metric', streamEnabled: false }))
+  const tenantId = getTenantId()!
+  const settings = await prisma.systemSettings.findUnique({ where: { tenantId } })
+  res.json(withStreamUrl(settings ?? { tenantId, unitSystem: 'metric', streamEnabled: false }))
 })
 
 router.put('/settings', ...guard, async (req, res) => {
   const result = settingsSchema.safeParse(req.body)
   if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
+  const tenantId = getTenantId()!
   const settings = await prisma.systemSettings.upsert({
-    where: { id: 'default' },
+    where: { tenantId },
     update: result.data,
-    create: { id: 'default', unitSystem: 'metric', streamEnabled: false, ...result.data },
+    create: { tenantId, unitSystem: 'metric', streamEnabled: false, ...result.data },
   })
   res.json(withStreamUrl(settings))
 })
@@ -205,7 +208,7 @@ router.post('/users/:id/babies', ...guard, async (req, res) => {
   const existing = await prisma.babyCaregiver.findUnique({ where: { babyId_userId: { babyId, userId: req.params.id } } })
   if (existing) { res.status(409).json({ error: 'User already has access to this baby' }); return }
   const record = await prisma.babyCaregiver.create({
-    data: { babyId, userId: req.params.id, role: caregiverRole, acceptedAt: new Date() },
+    data: { babyId, userId: req.params.id, role: caregiverRole, acceptedAt: new Date(), tenantId: getTenantId()! },
   })
   res.status(201).json(record)
 })
@@ -239,18 +242,19 @@ router.post('/seed', ...guard, async (req, res) => {
       name: 'Test Baby',
       dob,
       sex: 'F',
-      caregivers: { create: { userId, role: 'OWNER', acceptedAt: now } },
+      tenantId: getTenantId()!,
+      caregivers: { create: { userId, role: 'OWNER', acceptedAt: now, tenantId: getTenantId()! } },
     },
   })
   const bid = baby.id
 
   // Growth – every ~3 weeks from birth
   await prisma.growthRecord.createMany({ data: [
-    { babyId: bid, loggedBy: userId, measuredAt: daysAgo(90), weight: 3.4,  length: 50.5, headCirc: 34.2 },
-    { babyId: bid, loggedBy: userId, measuredAt: daysAgo(69), weight: 4.6,  length: 54.0, headCirc: 37.1 },
-    { babyId: bid, loggedBy: userId, measuredAt: daysAgo(48), weight: 5.5,  length: 57.2, headCirc: 39.0 },
-    { babyId: bid, loggedBy: userId, measuredAt: daysAgo(27), weight: 6.1,  length: 59.8, headCirc: 40.3 },
-    { babyId: bid, loggedBy: userId, measuredAt: daysAgo(6),  weight: 6.8,  length: 62.0, headCirc: 41.2 },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, measuredAt: daysAgo(90), weight: 3.4,  length: 50.5, headCirc: 34.2 },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, measuredAt: daysAgo(69), weight: 4.6,  length: 54.0, headCirc: 37.1 },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, measuredAt: daysAgo(48), weight: 5.5,  length: 57.2, headCirc: 39.0 },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, measuredAt: daysAgo(27), weight: 6.1,  length: 59.8, headCirc: 40.3 },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, measuredAt: daysAgo(6),  weight: 6.8,  length: 62.0, headCirc: 41.2 },
   ]})
 
   // Feedings – past 3 days, every 2-3 hours
@@ -260,7 +264,7 @@ router.post('/seed', ...guard, async (req, res) => {
     for (const hour of hours) {
       const isBreast = hour % 2 === 0
       feedingRows.push({
-        babyId: bid, loggedBy: userId,
+        babyId: bid, loggedBy: userId, tenantId: getTenantId()!,
         type: (isBreast ? 'BREAST' : 'BOTTLE') as 'BREAST' | 'BOTTLE',
         side: isBreast ? (hour % 4 === 0 ? 'left' : 'right') : undefined,
         durationMin: isBreast ? 15 + Math.floor(Math.random() * 10) : undefined,
@@ -280,7 +284,7 @@ router.post('/seed', ...guard, async (req, res) => {
     const hours = [1, 4, 7, 10, 13, 16, 20]
     for (let i = 0; i < hours.length; i++) {
       diaperRows.push({
-        babyId: bid, loggedBy: userId,
+        babyId: bid, loggedBy: userId, tenantId: getTenantId()!,
         type: diaperTypes[i],
         color: diaperTypes[i] === 'WET' ? undefined : 'yellow',
         occurredAt: daysAgo(day, hours[i]),
@@ -293,47 +297,47 @@ router.post('/seed', ...guard, async (req, res) => {
   const sleepRows: any[] = []
   for (let day = 3; day >= 1; day--) {
     // Night sleep
-    sleepRows.push({ babyId: bid, loggedBy: userId, type: 'NIGHT', location: 'bassinet', startedAt: daysAgo(day + 1, 21), endedAt: daysAgo(day, 5, 30) })
+    sleepRows.push({ babyId: bid, loggedBy: userId, tenantId: getTenantId()!, type: 'NIGHT', location: 'bassinet', startedAt: daysAgo(day + 1, 21), endedAt: daysAgo(day, 5, 30) })
     // Naps
-    sleepRows.push({ babyId: bid, loggedBy: userId, type: 'NAP', location: 'crib', startedAt: daysAgo(day, 9, 0), endedAt: daysAgo(day, 10, 20) })
-    sleepRows.push({ babyId: bid, loggedBy: userId, type: 'NAP', location: 'crib', startedAt: daysAgo(day, 13, 0), endedAt: daysAgo(day, 14, 45) })
-    sleepRows.push({ babyId: bid, loggedBy: userId, type: 'NAP', startedAt: daysAgo(day, 17, 0), endedAt: daysAgo(day, 17, 40) })
+    sleepRows.push({ babyId: bid, loggedBy: userId, tenantId: getTenantId()!, type: 'NAP', location: 'crib', startedAt: daysAgo(day, 9, 0), endedAt: daysAgo(day, 10, 20) })
+    sleepRows.push({ babyId: bid, loggedBy: userId, tenantId: getTenantId()!, type: 'NAP', location: 'crib', startedAt: daysAgo(day, 13, 0), endedAt: daysAgo(day, 14, 45) })
+    sleepRows.push({ babyId: bid, loggedBy: userId, tenantId: getTenantId()!, type: 'NAP', startedAt: daysAgo(day, 17, 0), endedAt: daysAgo(day, 17, 40) })
   }
   await prisma.sleepEvent.createMany({ data: sleepRows })
 
   // Medications
   await prisma.medicationEvent.createMany({ data: [
-    { babyId: bid, loggedBy: userId, name: 'Acetaminophen (Tylenol)', dose: 2.5, unit: 'mL', occurredAt: daysAgo(62, 15), notes: 'After 2-month vaccines' },
-    { babyId: bid, loggedBy: userId, name: 'Acetaminophen (Tylenol)', dose: 2.5, unit: 'mL', occurredAt: daysAgo(62, 21), notes: 'Follow-up dose' },
-    { babyId: bid, loggedBy: userId, name: 'Vitamin D drops', dose: 1.0, unit: 'mL', occurredAt: daysAgo(10, 8) },
-    { babyId: bid, loggedBy: userId, name: 'Vitamin D drops', dose: 1.0, unit: 'mL', occurredAt: daysAgo(3, 8) },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, name: 'Acetaminophen (Tylenol)', dose: 2.5, unit: 'mL', occurredAt: daysAgo(62, 15), notes: 'After 2-month vaccines' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, name: 'Acetaminophen (Tylenol)', dose: 2.5, unit: 'mL', occurredAt: daysAgo(62, 21), notes: 'Follow-up dose' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, name: 'Vitamin D drops', dose: 1.0, unit: 'mL', occurredAt: daysAgo(10, 8) },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, name: 'Vitamin D drops', dose: 1.0, unit: 'mL', occurredAt: daysAgo(3, 8) },
   ]})
 
   // Milestones
   await prisma.milestone.createMany({ data: [
-    { babyId: bid, loggedBy: userId, title: 'First smile', occurredAt: daysAgo(60), description: 'Smiled at mom during morning feed!' },
-    { babyId: bid, loggedBy: userId, title: 'Tracks objects', occurredAt: daysAgo(50), description: 'Following a toy with eyes' },
-    { babyId: bid, loggedBy: userId, title: 'First laugh', occurredAt: daysAgo(30), description: 'Laughed when tickled on the tummy' },
-    { babyId: bid, loggedBy: userId, title: 'Holds head up', occurredAt: daysAgo(20), description: 'Great head control during tummy time' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, title: 'First smile', occurredAt: daysAgo(60), description: 'Smiled at mom during morning feed!' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, title: 'Tracks objects', occurredAt: daysAgo(50), description: 'Following a toy with eyes' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, title: 'First laugh', occurredAt: daysAgo(30), description: 'Laughed when tickled on the tummy' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, title: 'Holds head up', occurredAt: daysAgo(20), description: 'Great head control during tummy time' },
   ]})
 
   // Appointments
   const appt1 = await prisma.appointment.create({ data: {
-    babyId: bid, loggedBy: userId,
+    babyId: bid, loggedBy: userId, tenantId: getTenantId()!,
     type: 'WELL_VISIT',
     date: daysAgo(89),
     doctor: 'Dr. Sarah Chen',
     notes: 'Newborn visit. Weight and height in normal range. Reviewed feeding schedule.',
   }})
   const appt2 = await prisma.appointment.create({ data: {
-    babyId: bid, loggedBy: userId,
+    babyId: bid, loggedBy: userId, tenantId: getTenantId()!,
     type: 'WELL_VISIT',
     date: daysAgo(62),
     doctor: 'Dr. Sarah Chen',
     notes: '2-month well-child. Vaccines administered. Reviewed sleep schedule.',
   }})
   await prisma.appointment.create({ data: {
-    babyId: bid, loggedBy: userId,
+    babyId: bid, loggedBy: userId, tenantId: getTenantId()!,
     type: 'SICK_VISIT',
     date: daysAgo(15),
     doctor: 'Dr. Marcus Webb',
@@ -342,13 +346,13 @@ router.post('/seed', ...guard, async (req, res) => {
 
   // Vaccines
   await prisma.vaccineRecord.createMany({ data: [
-    { babyId: bid, loggedBy: userId, vaccineName: 'Hepatitis B (HepB)', doseNumber: 1, administeredAt: daysAgo(90), appointmentId: appt1.id, notes: 'Birth dose' },
-    { babyId: bid, loggedBy: userId, vaccineName: 'DTaP', doseNumber: 1, lotNumber: 'A4821B', administeredAt: daysAgo(62), appointmentId: appt2.id },
-    { babyId: bid, loggedBy: userId, vaccineName: 'IPV', doseNumber: 1, lotNumber: 'C1193D', administeredAt: daysAgo(62), appointmentId: appt2.id },
-    { babyId: bid, loggedBy: userId, vaccineName: 'Hib', doseNumber: 1, lotNumber: 'H2240E', administeredAt: daysAgo(62), appointmentId: appt2.id },
-    { babyId: bid, loggedBy: userId, vaccineName: 'PCV15 (Pneumococcal)', doseNumber: 1, lotNumber: 'P9934F', administeredAt: daysAgo(62), appointmentId: appt2.id },
-    { babyId: bid, loggedBy: userId, vaccineName: 'RV (Rotavirus)', doseNumber: 1, administeredAt: daysAgo(62), appointmentId: appt2.id, notes: 'Oral dose' },
-    { babyId: bid, loggedBy: userId, vaccineName: 'Hepatitis B (HepB)', doseNumber: 2, lotNumber: 'B3319C', administeredAt: daysAgo(62), appointmentId: appt2.id },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'Hepatitis B (HepB)', doseNumber: 1, administeredAt: daysAgo(90), appointmentId: appt1.id, notes: 'Birth dose' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'DTaP', doseNumber: 1, lotNumber: 'A4821B', administeredAt: daysAgo(62), appointmentId: appt2.id },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'IPV', doseNumber: 1, lotNumber: 'C1193D', administeredAt: daysAgo(62), appointmentId: appt2.id },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'Hib', doseNumber: 1, lotNumber: 'H2240E', administeredAt: daysAgo(62), appointmentId: appt2.id },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'PCV15 (Pneumococcal)', doseNumber: 1, lotNumber: 'P9934F', administeredAt: daysAgo(62), appointmentId: appt2.id },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'RV (Rotavirus)', doseNumber: 1, administeredAt: daysAgo(62), appointmentId: appt2.id, notes: 'Oral dose' },
+    { babyId: bid, loggedBy: userId, tenantId: getTenantId()!, vaccineName: 'Hepatitis B (HepB)', doseNumber: 2, lotNumber: 'B3319C', administeredAt: daysAgo(62), appointmentId: appt2.id },
   ]})
 
   res.status(201).json({ ok: true, babyId: bid, babyName: baby.name })

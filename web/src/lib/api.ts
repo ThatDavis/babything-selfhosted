@@ -188,7 +188,7 @@ export interface OAuthProvider { id: string; name: string; label: string; client
 export interface SmtpConfig { id: string; host: string; port: number; secure: boolean; user: string; password?: string; fromEmail: string; fromName: string; enabled: boolean }
 export interface AdminUser { id: string; email: string; name: string; isAdmin: boolean; oauthProvider?: string | null; createdAt: string; babies: { babyId: string; babyName: string; role: string }[] }
 export interface AdminBaby { id: string; name: string; dob: string }
-export interface AppSettings { id: string; unitSystem: string; streamEnabled: boolean; streamUrl: string }
+export interface AppSettings { tenantId: string; unitSystem: string; streamEnabled: boolean; streamUrl: string }
 export interface BabyCaregiver { userId: string; role: string; user: { id: string; name: string; email: string } }
 export interface Dashboard {
   lastFeeding: FeedingEvent | null

@@ -8,12 +8,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Tenant {
+  id          String   @id @default(cuid())
+  subdomain   String   @unique
+  status      String   @default("TRIAL") // TRIAL | ACTIVE | SUSPENDED
+  trialEndsAt DateTime?
+  plan        String   @default("FLAT_RATE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users    User[]
+  babies   Baby[]
+  settings SystemSettings?
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
   passwordHash  String?
   name          String
   isAdmin       Boolean  @default(false)
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   oauthProvider String?
   oauthId       String?
   createdAt     DateTime @default(now())
@@ -32,6 +48,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
 
   @@unique([oauthProvider, oauthId])
+  @@index([tenantId])
 }
 
 model Baby {
@@ -39,6 +56,8 @@ model Baby {
   name      String
   dob       DateTime
   sex       String?
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -52,11 +71,14 @@ model Baby {
   appointments  Appointment[]
   vaccines      VaccineRecord[]
   invites       InviteToken[]
+
+  @@index([tenantId])
 }
 
 model BabyCaregiver {
   babyId     String
   userId     String
+  tenantId   String
   role       Role     @default(CAREGIVER)
   invitedAt  DateTime @default(now())
   acceptedAt DateTime?
@@ -65,6 +87,7 @@ model BabyCaregiver {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([babyId, userId])
+  @@index([tenantId])
 }
 
 enum Role {
@@ -78,18 +101,22 @@ model InviteToken {
   email     String
   role      Role      @default(CAREGIVER)
   createdBy String
+  tenantId  String
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   baby    Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   creator User @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId])
 }
 
 model FeedingEvent {
   id          String    @id @default(cuid())
   babyId      String
   loggedBy    String
+  tenantId    String
   type        FeedType
   side        String?
   durationMin Int?
@@ -103,6 +130,8 @@ model FeedingEvent {
 
   baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user User @relation(fields: [loggedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 enum FeedType {
@@ -114,6 +143,7 @@ model DiaperEvent {
   id         String     @id @default(cuid())
   babyId     String
   loggedBy   String
+  tenantId   String
   type       DiaperType
   color      String?
   occurredAt DateTime
@@ -123,6 +153,8 @@ model DiaperEvent {
 
   baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user User @relation(fields: [loggedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 enum DiaperType {
@@ -136,6 +168,7 @@ model SleepEvent {
   id        String     @id @default(cuid())
   babyId    String
   loggedBy  String
+  tenantId  String
   type      SleepType
   location  String?
   startedAt DateTime
@@ -146,6 +179,8 @@ model SleepEvent {
 
   baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user User @relation(fields: [loggedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 enum SleepType {
@@ -157,6 +192,7 @@ model GrowthRecord {
   id         String   @id @default(cuid())
   babyId     String
   loggedBy   String
+  tenantId   String
   weight     Float?
   length     Float?
   headCirc   Float?
@@ -167,12 +203,15 @@ model GrowthRecord {
 
   baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user User @relation(fields: [loggedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 model MedicationEvent {
   id         String   @id @default(cuid())
   babyId     String
   loggedBy   String
+  tenantId   String
   name       String
   dose       Float
   unit       String
@@ -183,12 +222,15 @@ model MedicationEvent {
 
   baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user User @relation(fields: [loggedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 model Milestone {
   id          String   @id @default(cuid())
   babyId      String
   loggedBy    String
+  tenantId    String
   title       String
   description String?
   occurredAt  DateTime
@@ -197,12 +239,15 @@ model Milestone {
 
   baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user User @relation(fields: [loggedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 model Appointment {
   id        String          @id @default(cuid())
   babyId    String
   loggedBy  String
+  tenantId  String
   date      DateTime
   doctor    String?
   type      AppointmentType @default(WELL_VISIT)
@@ -213,6 +258,8 @@ model Appointment {
   baby     Baby            @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user     User            @relation(fields: [loggedBy], references: [id])
   vaccines VaccineRecord[]
+
+  @@index([tenantId])
 }
 
 enum AppointmentType {
@@ -226,6 +273,7 @@ model VaccineRecord {
   id             String   @id @default(cuid())
   babyId         String
   loggedBy       String
+  tenantId       String
   vaccineName    String
   doseNumber     Int?
   lotNumber      String?
@@ -238,17 +286,22 @@ model VaccineRecord {
   baby        Baby         @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [loggedBy], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
   token     String    @unique
+  tenantId  String
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model OAuthProvider {
@@ -281,7 +334,8 @@ model SmtpConfig {
 }
 
 model SystemSettings {
-  id            String   @id @default("default")
+  tenantId      String   @id
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   unitSystem    String   @default("metric")
   streamEnabled Boolean  @default(false)
   updatedAt     DateTime @updatedAt

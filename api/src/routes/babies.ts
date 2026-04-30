@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, requireBabyAccess, AuthRequest } from '../middleware/auth.js'
+import { getTenantId } from '../lib/tenant-context.js'
 
 const router = Router()
 
@@ -35,8 +36,9 @@ router.post('/', requireAuth, async (req, res) => {
     data: {
       ...result.data,
       dob: new Date(result.data.dob),
+      tenantId: getTenantId()!,
       caregivers: {
-        create: { userId, role: 'OWNER', acceptedAt: new Date() },
+        create: { userId, role: 'OWNER', acceptedAt: new Date(), tenantId: getTenantId()! },
       },
     },
   })

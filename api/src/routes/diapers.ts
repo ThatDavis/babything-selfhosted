@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, requireBabyAccess, AuthRequest } from '../middleware/auth.js'
 import { emitBabyEvent } from '../lib/socket.js'
+import { getTenantId } from '../lib/tenant-context.js'
 
 const router = Router({ mergeParams: true })
 
@@ -40,7 +41,7 @@ router.post('/', requireAuth, requireBabyAccess(), async (req, res) => {
   const loggedBy = (req as AuthRequest).userId
 
   const diaper = await prisma.diaperEvent.create({
-    data: { ...result.data, occurredAt: new Date(result.data.occurredAt), babyId, loggedBy },
+    data: { ...result.data, occurredAt: new Date(result.data.occurredAt), babyId, loggedBy, tenantId: getTenantId()! },
     include: { user: { select: { id: true, name: true } } },
   })
   emitBabyEvent(babyId, 'diaper:created', diaper)

@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import passport from 'passport'
 import { initSocket } from './lib/socket.js'
+import { tenantResolver } from './middleware/tenant.js'
 import authRouter from './routes/auth.js'
 import adminRouter from './routes/admin.js'
 import babiesRouter from './routes/babies.js'
@@ -57,6 +58,12 @@ if (corsOrigin) {
 
 app.use(express.json({ limit: '100kb' }))
 
+// Health check runs before tenant resolution so it works even if DB is unreachable
+app.get('/health', (_req, res) => res.json({ ok: true }))
+
+// Tenant resolution middleware (subdomain → tenant, or default tenant in self-hosted)
+app.use(tenantResolver)
+
 // Rate limiting for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -86,8 +93,6 @@ app.use('/babies/:babyId/appointments', appointmentsRouter)
 app.use('/babies/:babyId/vaccines', vaccinesRouter)
 app.use('/babies/:babyId/stats', statsRouter)
 app.use('/babies/:babyId', reportsRouter)
-
-app.get('/health', (_req, res) => res.json({ ok: true }))
 
 const port = Number(process.env.PORT ?? 3001)
 httpServer.listen(port, () => console.log(`api listening on :${port}`))

@@ -57,16 +57,16 @@ before moving to the cloud migration.
 
 ### Schema & Multi-Tenancy
 
-- [ ] Add `Tenant` model to Prisma schema
-- [ ] Add `tenantId` to `User`, `Baby`, and all event tables
-- [ ] Refactor `SystemSettings` to be per-tenant
-- [ ] Implement PostgreSQL RLS policies for tenant isolation
-- [ ] Add tenant resolution middleware (subdomain → tenant lookup)
+- [x] Add `Tenant` model to Prisma schema
+- [x] Add `tenantId` to `User`, `Baby`, and all event tables
+- [x] Refactor `SystemSettings` to be per-tenant
+- [x] Implement PostgreSQL RLS policies for tenant isolation
+- [x] Add tenant resolution middleware (subdomain → tenant lookup)
 
 ### Mode Switch
 
-- [ ] `DEPLOYMENT_MODE=selfhosted|cloud` environment variable
-- [ ] Self-hosted mode: preserves current behavior (global settings)
+- [x] `DEPLOYMENT_MODE=selfhosted|cloud` environment variable
+- [x] Self-hosted mode: preserves current behavior (global settings)
 - [ ] Cloud mode: tenant-scoped queries, no SMTP config, no monitor tab
 
 ### Provisioning Service

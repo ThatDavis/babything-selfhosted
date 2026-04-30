@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, requireBabyAccess, AuthRequest } from '../middleware/auth.js'
+import { getTenantId } from '../lib/tenant-context.js'
 
 const router = Router({ mergeParams: true })
 
@@ -24,7 +25,7 @@ router.post('/', requireAuth, requireBabyAccess(), async (req, res) => {
   const result = schema.safeParse(req.body)
   if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
   const record = await prisma.milestone.create({
-    data: { ...result.data, occurredAt: new Date(result.data.occurredAt), babyId: req.params.babyId, loggedBy: (req as AuthRequest).userId },
+    data: { ...result.data, occurredAt: new Date(result.data.occurredAt), babyId: req.params.babyId, loggedBy: (req as AuthRequest).userId, tenantId: getTenantId()! },
     include: { user: { select: { id: true, name: true } } },
   })
   res.status(201).json(record)

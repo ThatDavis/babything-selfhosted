@@ -10,6 +10,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth.js'
 import { sendInviteEmail, sendPasswordResetEmail } from '../lib/mailer.js'
 import { decryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
+import { getTenantId } from '../lib/tenant-context.js'
 
 const router = Router()
 
@@ -60,7 +61,7 @@ if (googleClientId && googleClientSecret) {
             } else {
               const count = await prisma.user.count()
               user = await prisma.user.create({
-                data: { email, name, oauthProvider: 'google', oauthId, isAdmin: count === 0 },
+                data: { email, name, oauthProvider: 'google', oauthId, isAdmin: count === 0, tenantId: getTenantId()! },
               })
             }
           }
@@ -127,7 +128,7 @@ router.post('/register', async (req, res) => {
 
   const count = await prisma.user.count()
   const passwordHash = await bcrypt.hash(password, 12)
-  const user = await prisma.user.create({ data: { email, passwordHash, name, isAdmin: count === 0 } })
+  const user = await prisma.user.create({ data: { email, passwordHash, name, isAdmin: count === 0, tenantId: getTenantId()! } })
   const token = signToken(user.id)
   res.cookie('session', token, COOKIE_OPTS)
   audit(req, 'register', 'success', { actor: user.id, details: { email: user.email, isAdmin: user.isAdmin } })
@@ -191,7 +192,7 @@ router.post('/forgot-password', async (req, res) => {
 
   const token = nanoid(48)
   await prisma.passwordResetToken.create({
-    data: { userId: user.id, token, expiresAt: new Date(Date.now() + 3600_000) },
+    data: { userId: user.id, token, expiresAt: new Date(Date.now() + 3600_000), tenantId: getTenantId()! },
   })
   const url = `${process.env.APP_URL ?? 'http://localhost'}/reset-password/${token}`
   await sendPasswordResetEmail(user.email, user.name, url)
@@ -236,7 +237,7 @@ router.post('/invite', requireAuth, async (req, res) => {
 
   const token = nanoid(32)
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  await prisma.inviteToken.create({ data: { token, babyId, email, role, createdBy: userId, expiresAt } })
+  await prisma.inviteToken.create({ data: { token, babyId, email, role, createdBy: userId, expiresAt, tenantId: getTenantId()! } })
 
   const inviteUrl = `${process.env.APP_URL ?? 'http://localhost'}/invite/${token}`
   const [inviter, baby] = await Promise.all([
@@ -260,7 +261,7 @@ router.post('/invite/:token/accept', requireAuth, async (req, res) => {
   const existing = await prisma.babyCaregiver.findUnique({ where: { babyId_userId: { babyId: invite.babyId, userId } } })
   if (existing) { res.status(409).json({ error: 'Already a caregiver for this baby' }); return }
   await prisma.$transaction([
-    prisma.babyCaregiver.create({ data: { babyId: invite.babyId, userId, role: invite.role, acceptedAt: new Date() } }),
+    prisma.babyCaregiver.create({ data: { babyId: invite.babyId, userId, role: invite.role, acceptedAt: new Date(), tenantId: getTenantId()! } }),
     prisma.inviteToken.update({ where: { token: invite.token }, data: { usedAt: new Date() } }),
   ])
   audit(req, 'invite_accepted', 'success', { actor: userId, details: { babyId: invite.babyId, role: invite.role } })
@@ -375,7 +376,7 @@ router.get('/oauth/:name/callback', async (req: Request, res: Response) => {
       await prisma.user.update({ where: { id: user.id }, data: { oauthProvider: provider.name, oauthId } })
     } else {
       const count = await prisma.user.count()
-      user = await prisma.user.create({ data: { email, name, oauthProvider: provider.name, oauthId, isAdmin: count === 0 } })
+      user = await prisma.user.create({ data: { email, name, oauthProvider: provider.name, oauthId, isAdmin: count === 0, tenantId: getTenantId()! } })
     }
   }
 
