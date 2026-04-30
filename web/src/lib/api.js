@@ -130,5 +130,18 @@ export const api = {
             return res.blob();
         },
         email: (babyId, body) => request(`/babies/${babyId}/report/email`, { method: 'POST', body: JSON.stringify(body) }),
+        export: async (babyId, opts) => {
+            const params = new URLSearchParams();
+            if (opts.from)
+                params.set('from', opts.from);
+            if (opts.to)
+                params.set('to', opts.to);
+            const res = await fetch(`/api/babies/${babyId}/export?${params}`, {
+                credentials: 'include',
+            });
+            if (!res.ok)
+                throw new ApiError(res.status, 'Failed to export data');
+            return res.blob();
+        },
     },
 };

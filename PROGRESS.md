@@ -126,7 +126,7 @@ After completing Phase 3, the project will move to the **Subscription Service** 
 
 ### Tasks
 
-- [ ] PWA manifest + icons (installable on home screen)
+- [x] PWA manifest + icons (installable on home screen)
 - [x] Real-time sync via Socket.io (push event changes to all caregivers in the same baby room)
 - [ ] CSV export (per event type or full export, date range picker)
 - [ ] OAuth — Google (Passport.js local → Google strategy)

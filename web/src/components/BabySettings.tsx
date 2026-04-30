@@ -21,6 +21,10 @@ export default function BabySettings({ baby, caregivers, onClose, onDeleted, onC
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  const [exportFrom, setExportFrom] = useState('')
+  const [exportTo, setExportTo] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [exportMsg, setExportMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const isOwner = baby.role === 'OWNER'
 
@@ -122,6 +126,76 @@ export default function BabySettings({ baby, caregivers, onClose, onDeleted, onC
           <p className="text-xs text-stone-400 mb-3">Generate a formatted PDF for sharing with {baby.name}'s doctor — includes growth, vaccines, medications, and more.</p>
           <button onClick={() => setShowReport(true)} className="btn-primary w-full text-sm">
             Generate report…
+          </button>
+        </div>
+
+        {/* CSV Export */}
+        <div className="border-t border-stone-100 pt-4">
+          <h3 className="text-sm font-semibold text-stone-500 mb-2">Export Data</h3>
+          <p className="text-xs text-stone-400 mb-3">Download a ZIP of all tracking data for {baby.name} as CSV files.</p>
+
+          {exportMsg && (
+            <p className={`text-sm px-3 py-2 rounded-xl mb-3 ${exportMsg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              {exportMsg.text}
+            </p>
+          )}
+
+          <div className="space-y-2 mb-3">
+            <div className="flex gap-2 items-center">
+              <label className="text-xs text-stone-500 w-10">From</label>
+              <input
+                type="date"
+                className="input flex-1 text-sm"
+                value={exportFrom}
+                onChange={e => setExportFrom(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <label className="text-xs text-stone-500 w-10">To</label>
+              <input
+                type="date"
+                className="input flex-1 text-sm"
+                value={exportTo}
+                onChange={e => setExportTo(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            {!exportFrom && !exportTo && (
+              <p className="text-xs text-stone-400">No dates selected — all records will be exported.</p>
+            )}
+          </div>
+
+          <button
+            onClick={async () => {
+              setExporting(true)
+              setExportMsg(null)
+              try {
+                const blob = await api.reports.export(baby.id, { from: exportFrom || undefined, to: exportTo || undefined })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${baby.name.replace(/\s+/g, '_')}_export_${new Date().toISOString().split('T')[0]}.zip`
+                a.click()
+                URL.revokeObjectURL(url)
+                setExportMsg({ ok: true, text: 'Export downloaded.' })
+              } catch (err) {
+                setExportMsg({ ok: false, text: err instanceof ApiError ? err.message : 'Export failed.' })
+              } finally {
+                setExporting(false)
+              }
+            }}
+            disabled={exporting}
+            className="btn-primary w-full text-sm flex items-center justify-center gap-2"
+          >
+            {exporting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Exporting…
+              </>
+            ) : (
+              '↓  Download CSV Export'
+            )}
           </button>
         </div>
 
