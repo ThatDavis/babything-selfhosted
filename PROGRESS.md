@@ -41,13 +41,13 @@ before moving to the cloud migration.
 - [x] Unit preference toggle (metric / imperial)
 - [x] PDF pediatric report generation
 
-### Phase 3 — Polish & Sharing ✓ (mostly)
+### Phase 3 — Polish & Sharing ✓
 
 - [x] PWA manifest + icons
 - [x] Real-time sync via Socket.io
 - [x] CSV export (ZIP with one CSV per event type, date range filter)
 - [x] Email via SMTP (Nodemailer) — invites, password resets, reports
-- [ ] OAuth — Google (dedicated Passport.js strategy)
+- [x] OAuth — Google (dedicated Passport.js strategy)
 - [ ] ~~OAuth — Apple~~ — Deferred to post-launch
 - [ ] ~~Photo uploads for milestones~~ — Out of scope
 
@@ -110,7 +110,7 @@ before moving to the cloud migration.
 |-------|--------|-----------|-----------|
 | Phase 1 — Core MVP | ✅ Complete | 8/8 | 0 |
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
-| Phase 3 — Polish | 🟡 Nearly done | 4/5 | 1 |
+| Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | 🔵 Not started | 0/13 | 13 |
 | Phase 5 — Growth | ⚪ Planned | 0/6 | 6 |
 

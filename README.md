@@ -17,12 +17,13 @@ A self-hosted newborn tracking app for families and caregivers. Log feedings, di
 - **Activity feed** — unified timeline of all recent events
 - **Dashboard charts** — feedings, diapers, sleep, and weight trend over time
 - **PDF reports** — branded summary you can download or email directly to a pediatrician
+- **CSV export** — download a ZIP of all event data, filterable by date range
 - **Baby monitor** — live RTSP camera stream (video or audio-only background mode, picture-in-picture)
 - **Multi-caregiver** — invite others by email; owner/caregiver roles
 - **Real-time sync** — changes appear instantly on all open devices
 - **Metric or imperial** — switch units globally from admin settings
 - **PWA** — installable on iOS and Android as a home-screen app
-- **OAuth** — optionally configure any OAuth2 provider (Google, etc.)
+- **OAuth** — optionally configure any OAuth2 provider, or use the dedicated Google sign-in
 
 ---
 
@@ -58,14 +59,23 @@ POSTGRES_DB=babything
 JWT_SECRET=change-this-to-a-long-random-string
 INVITE_SECRET=change-this-too
 
-# Public URL of your instance (used in invite and reset emails)
+# Public URL of your instance (used in invite, reset emails, and OAuth callbacks)
 APP_URL=http://your-server-ip-or-domain
 
 # Port nginx listens on
 PORT=80
 
+# Encryption key for sensitive data at rest (SMTP passwords, OAuth secrets)
+# Generate with: openssl rand -base64 32
+ENCRYPTION_KEY=
+
 # Baby monitor — RTSP URL of your camera (leave blank to disable)
 CAMERA_RTSP_URL=
+
+# Optional: Google OAuth sign-in
+# Create credentials at https://console.cloud.google.com/apis/credentials
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 ```
 
 **3. Start**

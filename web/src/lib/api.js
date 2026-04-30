@@ -36,6 +36,7 @@ export const api = {
         checkResetToken: (token) => request(`/auth/reset-password/${token}`),
         resetPassword: (token, password) => request(`/auth/reset-password/${token}`, { method: 'POST', body: JSON.stringify({ password }) }),
         oauthProviders: () => request('/auth/oauth-providers'),
+        config: () => request('/auth/config'),
     },
     admin: {
         getSmtp: () => request('/admin/smtp'),

@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
+import passport from 'passport'
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, AuthRequest } from '../middleware/auth.js'
 import { sendInviteEmail, sendPasswordResetEmail } from '../lib/mailer.js'
@@ -10,6 +12,67 @@ import { decryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 
 const router = Router()
+
+// ── Passport serialization (stateless JWT; sessions not used) ──
+passport.serializeUser((user: any, done) => done(null, user.id))
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id } })
+    done(null, user)
+  } catch (err) {
+    done(err, null)
+  }
+})
+
+// ── Google OAuth strategy (dedicated, env-driven) ───────────────
+const googleClientId = process.env.GOOGLE_CLIENT_ID
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+
+if (googleClientId && googleClientSecret) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: googleClientId,
+        clientSecret: googleClientSecret,
+        callbackURL: `${process.env.APP_URL ?? 'http://localhost'}/api/auth/oauth/google/callback`,
+      },
+      async (_accessToken, _refreshToken, profile, done) => {
+        const email = profile.emails?.[0]?.value
+        const name = profile.displayName || email || 'User'
+        const oauthId = profile.id
+
+        if (!email) {
+          return done(null, false, { message: 'Email not provided by Google' })
+        }
+
+        try {
+          let user = await prisma.user.findFirst({
+            where: { oauthProvider: 'google', oauthId },
+          })
+
+          if (!user) {
+            user = await prisma.user.findUnique({ where: { email } })
+            if (user) {
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data: { oauthProvider: 'google', oauthId },
+              })
+            } else {
+              const count = await prisma.user.count()
+              user = await prisma.user.create({
+                data: { email, name, oauthProvider: 'google', oauthId, isAdmin: count === 0 },
+              })
+            }
+          }
+
+          done(null, user)
+        } catch (err) {
+          done(err, false)
+        }
+      }
+    )
+  )
+}
 
 function extractToken(req: Request): string | null {
   const cookieToken = (req as any).cookies?.session
@@ -211,6 +274,39 @@ router.get('/invite/:token', async (req, res) => {
   })
   if (!invite || invite.usedAt || invite.expiresAt < new Date()) { res.status(410).json({ error: 'Invite is invalid or expired' }); return }
   res.json({ babyId: invite.babyId, babyName: invite.baby.name, email: invite.email, role: invite.role })
+})
+
+// ── Auth config (public) ─────────────────────────────────
+router.get('/config', async (_req, res) => {
+  res.json({
+    googleEnabled: !!process.env.GOOGLE_CLIENT_ID,
+  })
+})
+
+// ── Google OAuth (dedicated Passport.js strategy) ──────────
+router.get('/oauth/google/start', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    res.status(404).json({ error: 'Google OAuth not configured' })
+    return
+  }
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    prompt: 'select_account',
+  })(req, res, next)
+})
+
+router.get('/oauth/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
+    if (err || !user) {
+      console.error('Google OAuth error:', err, info)
+      res.redirect('/login?error=oauth')
+      return
+    }
+    const token = signToken(user.id)
+    res.cookie('session', token, COOKIE_OPTS)
+    audit(req, 'oauth_login', 'success', { actor: user.id, details: { provider: 'google' } })
+    res.redirect('/')
+  })(req, res, next)
 })
 
 // ── OAuth: list enabled providers (public) ───────────────

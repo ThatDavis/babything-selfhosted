@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
+import passport from 'passport'
 import { initSocket } from './lib/socket.js'
 import authRouter from './routes/auth.js'
 import adminRouter from './routes/admin.js'
@@ -45,6 +46,7 @@ if (trustedProxies) {
   app.set('trust proxy', trustedProxies.split(',').map(s => s.trim()))
 }
 app.use(cookieParser(process.env.JWT_SECRET))
+app.use(passport.initialize())
 
 // CORS: only allow configured origin; never default to wildcard
 // credentials: true is required for cookies to be sent cross-origin
@@ -68,6 +70,7 @@ app.use('/auth/login', authLimiter)
 app.use('/auth/register', authLimiter)
 app.use('/auth/forgot-password', authLimiter)
 app.use('/auth/reset-password', authLimiter)
+app.use('/auth/oauth/google/start', authLimiter)
 
 app.use('/auth', authRouter)
 app.use('/admin', adminRouter)
