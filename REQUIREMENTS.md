@@ -1,253 +1,175 @@
-# Babything — Newborn Tracker Requirements
+# Babything — Requirements
+
+> This document defines what Babything is and what it does.
+> For the technical architecture and implementation plan, see `SUBSCRIPTION_ROADMAP.md`.
+> For development workflow standards, see `DEVELOPMENT.md`.
+
+---
 
 ## Overview
 
-A self-hosted, mobile-first web application for tracking newborn care events in real time across multiple caregivers. Supports multiple babies, quick-tap mobile logging, and a richer desktop dashboard with charts and history.
+Babything is a **newborn tracking application** for families and caregivers. It
+tracks feedings, diapers, sleep, growth, medications, vaccines, appointments,
+and milestones. Multiple caregivers can collaborate in real time.
+
+The product is offered in two forms:
+
+1. **Self-Hosted** — Free, open-source, runs on your own hardware (Docker).
+2. **Cloud** — Subscription hosting ($8/mo or $77/yr) at `yourfamily.babything.app`.
+   We handle servers, backups, SSL, and updates.
+
+Both share the same codebase and feature set. The only difference is who runs
+the server.
 
 ---
 
-## Users & Authentication
+## Core Features
 
-### v1
-- Email + password authentication (bcrypt, JWT sessions)
-- Invite-based caregiver access per baby (invite by email link)
-- Roles per baby: **Owner** (can manage caregivers, delete baby) | **Caregiver** (can log and view)
-- Session persists on mobile (long-lived refresh tokens)
+### Tracking Events
 
-### Future (v2)
-- OAuth providers: Google, Apple
-- Optional MFA
+| Event | Fields |
+|-------|--------|
+| **Feedings** | Type (`breast` / `bottle`), side, duration, amount, milk type, start/end times, notes |
+| **Diapers** | Type (`wet` / `dirty` / `both` / `dry`), color, time, notes |
+| **Sleep** | Type (`nap` / `night`), location, start/end times, notes |
+| **Growth** | Weight, length, head circumference, measured time, notes |
+| **Medications** | Name, dose, unit, time, notes |
+| **Milestones** | Title, description, time, notes |
+| **Appointments** | Date, doctor, type (`well-visit` / `sick-visit` / `specialist` / `other`), notes |
+| **Vaccines** | Name, dose number, lot number, administered time, linked appointment, notes |
 
----
+### Dashboard & Reports
 
-## Baby Profiles
+- At-a-glance cards: time since last feed, last diaper, current sleep status
+- Charts: feed timeline (24h), diaper frequency (7d), sleep hours (7d), weight trend
+- Recent activity feed, filterable by event type
+- **PDF pediatric report** — branded summary for doctors
+- **CSV export** — ZIP of all event data, filterable by date range
 
-- Multiple babies per account
-- Baby fields: name, date of birth, sex (optional), photo (optional)
-- Each baby has its own set of caregivers
-- Dashboard and log views are scoped per selected baby
+### Collaboration
 
----
+- Multi-caregiver access per baby
+- Invite by email link
+- Real-time sync via WebSocket (all caregivers see updates instantly)
+- Owner / Caregiver roles
 
-## Tracking — Event Types
+### Authentication
 
-### 1. Feedings
-| Field | Details |
-|---|---|
-| Type | `breast` \| `bottle` |
-| **Breast** side | `left` \| `right` \| `both` |
-| **Breast** duration | minutes (timer or manual entry) |
-| **Bottle** amount | ml or oz (user preference) |
-| **Bottle** milk type | `breastmilk` \| `formula` \| `other` |
-| Started at | datetime |
-| Ended at | datetime (or derived from duration) |
-| Notes | optional free text |
-| Logged by | caregiver |
+- Email + password (bcrypt, JWT)
+- Platform-managed Google OAuth (cloud)
+- Configurable OAuth2 providers (self-hosted)
 
-### 2. Diaper Changes
-| Field | Details |
-|---|---|
-| Type | `wet` \| `dirty` \| `both` \| `dry` |
-| Color | `yellow` \| `green` \| `brown` \| `black (meconium)` \| `other` |
-| Notes | optional free text |
-| Occurred at | datetime |
-| Logged by | caregiver |
+### Other
 
-### 3. Sleep
-| Field | Details |
-|---|---|
-| Type | `nap` \| `night` |
-| Started at | datetime |
-| Ended at | datetime (nullable — supports in-progress sleep) |
-| Location | optional: `crib`, `bassinet`, `arms`, `stroller`, `other` |
-| Notes | optional free text |
-| Logged by | caregiver |
-
-### 4. Weight & Growth
-| Field | Details |
-|---|---|
-| Weight | grams or lbs/oz (user preference) |
-| Length | cm or inches (optional) |
-| Head circumference | cm or inches (optional) |
-| Measured at | datetime |
-| Notes | optional free text |
-| Logged by | caregiver |
-
-### 5. Medications & Vitamins
-| Field | Details |
-|---|---|
-| Name | free text (e.g., "Vitamin D", "Tylenol") |
-| Dose | numeric |
-| Unit | `ml` \| `mg` \| `drops` \| `other` |
-| Occurred at | datetime |
-| Notes | optional free text |
-| Logged by | caregiver |
-
-### 6. Milestones & Notes
-| Field | Details |
-|---|---|
-| Title | short label (e.g., "First smile") |
-| Description | optional rich text |
-| Photo | optional image upload (v2) |
-| Occurred at | datetime |
-| Logged by | caregiver |
-
-### 7. Doctor Appointments
-| Field | Details |
-|---|---|
-| Date & time | datetime |
-| Doctor / clinic | free text |
-| Type | `well-visit` \| `sick-visit` \| `specialist` \| `other` |
-| Notes | optional free text |
-| Logged by | caregiver |
-
-### 8. Vaccines
-| Field | Details |
-|---|---|
-| Vaccine name | free text or selected from standard schedule |
-| Dose number | e.g. 1, 2, 3 |
-| Lot number | optional free text |
-| Administered at | datetime |
-| Appointment | optional link to a doctor appointment |
-| Notes | optional free text |
-| Logged by | caregiver |
-
-#### Standard Vaccination Schedule
-Built-in CDC schedule shown as a timeline relative to baby's DOB. Displays:
-- Which vaccines are **due** (upcoming within 4 weeks)
-- Which are **overdue** (past due date, not yet logged)
-- Which are **complete** (logged against the baby)
-
-Schedule milestones (approximate ages):
-| Age | Vaccines |
-|---|---|
-| Birth | HepB #1 |
-| 1–2 months | HepB #2 |
-| 2 months | DTaP #1, Hib #1, IPV #1, PCV #1, RV #1 |
-| 4 months | DTaP #2, Hib #2, IPV #2, PCV #2, RV #2 |
-| 6 months | DTaP #3, Hib #3, IPV #3, PCV #3, HepB #3, Flu #1 |
-| 12–15 months | MMR #1, Varicella #1, HepA #1, Hib #4, PCV #4 |
-| 15–18 months | DTaP #4 |
-| 18–24 months | HepA #2 |
-| 4–6 years | DTaP #5, MMR #2, Varicella #2, IPV #4 |
-
-Custom vaccines (outside the standard schedule) can also be logged freely.
+- Metric or imperial units (user preference)
+- PWA support (installable on iOS/Android home screen)
+- Baby monitor — live RTSP camera stream (self-hosted only)
 
 ---
 
-## Real-Time Sync
+## Cloud Offering (Subscription)
 
-- **Ideal:** WebSocket broadcast (Socket.io or native WS) — push event updates to all connected caregivers for the same baby in real time
-- **Fallback:** Server-Sent Events or polling (30s interval) if WS is unavailable
-- No conflict resolution needed — last write wins per event record
+### Pricing
 
----
+| Plan | Monthly | Annual | Savings |
+|------|---------|--------|---------|
+| Flat Rate | $8/mo | $77/yr | ~20% |
 
-## Dashboard (Desktop Primary, Mobile Summary)
+### What's Included
 
-### At-a-Glance Cards (mobile + desktop)
-- Time since last feed (with feed type)
-- Time since last diaper change (with type)
-- Current sleep status — asleep/awake + duration
-- Next suggested feed window (based on average interval, configurable)
+- Private subdomain (`yourfamily.babything.app`)
+- All tracking features
+- Unlimited babies and caregivers
+- Automatic SSL, backups, and updates
+- Platform-managed Google sign-in
+- Email delivery handled by us
+- 14-day free trial (no credit card)
 
-### Charts & History (desktop, collapsible on mobile)
-- **Feed timeline** — hourly bar chart for last 24h, toggleable to 7-day
-- **Sleep pattern** — daily sleep blocks over last 7 days (visual Gantt-style)
-- **Diaper frequency** — daily count chart, last 7 days
-- **Weight trend** — line graph over all recorded measurements
-- **Daily totals** — feeds, diapers, total sleep hours for selected day
+### Tenant Lifecycle
 
-### Recent Activity Feed
-- Chronological log of all events, all caregivers, for the selected baby
-- Filterable by event type
-- Editable / deletable by the caregiver who logged it (Owners can edit any)
+1. User signs up on landing page (email + subdomain preference)
+2. Provisioning service creates tenant and pushes to main app
+3. Stripe Checkout handles billing
+4. Tenant status: `TRIAL` → `ACTIVE` → `SUSPENDED` (read-only) → `DELETED` (30 days later)
 
----
+### Architecture
 
-## Mobile UI
-
-- Large tap targets for all primary actions
-- Home screen shows at-a-glance cards + quick-log buttons
-- Quick-log: one tap opens a minimal bottom sheet — sensible defaults, confirm with one more tap
-- Built-in feed timer (start/stop with elapsed display)
-- Built-in sleep timer (start/stop)
-- Swipe to switch between babies
+- **True multi-tenant SaaS** — one app, shared PostgreSQL with RLS
+- **Subdomain routing** — `tenant.babything.app`
+- **Per-tenant data isolation** — PostgreSQL Row-Level Security
+- **Provisioning service** — handles Stripe webhooks, tenant lifecycle
+- **Redis cache** — tenant status lookups between services
 
 ---
 
-## Desktop UI
+## Data Model
 
-- Sidebar navigation: Dashboard | Log | Growth | Milestones | Settings
-- Full form controls with all optional fields visible
-- Dashboard with all charts rendered
-- Caregiver management panel (Owner only)
-- Export log to CSV (per event type, date range)
+See `api/prisma/schema.prisma` for the canonical schema.
+
+Key entities:
+
+```
+Tenant          — id, subdomain, status, trialEndsAt
+User            — id, email, passwordHash, name, tenantId, isAdmin
+Baby            — id, name, dob, sex, tenantId
+BabyCaregiver   — babyId, userId, role, invitedAt, acceptedAt
+FeedingEvent    — id, babyId, tenantId, type, side, durationMin, amount, milkType, startedAt, endedAt, notes
+DiaperEvent     — id, babyId, tenantId, type, color, occurredAt, notes
+SleepEvent      — id, babyId, tenantId, type, location, startedAt, endedAt, notes
+GrowthRecord    — id, babyId, tenantId, weight, length, headCirc, measuredAt, notes
+MedicationEvent — id, babyId, tenantId, name, dose, unit, occurredAt, notes
+Milestone       — id, babyId, tenantId, title, description, occurredAt, notes
+Appointment     — id, babyId, tenantId, date, doctor, type, notes
+VaccineRecord   — id, babyId, tenantId, vaccineName, doseNumber, lotNumber, administeredAt, notes
+```
+
+*(Self-hosted mode omits `Tenant` and `tenantId`; settings are global per instance.)*
 
 ---
 
 ## Tech Stack
 
 | Layer | Choice |
-|---|---|
-| Runtime | Node.js (LTS) |
-| Framework | Express or Fastify |
+|-------|--------|
+| API | Node.js + Express + TypeScript + Prisma |
 | Database | PostgreSQL |
-| ORM | Prisma |
+| Frontend | React + Vite + Tailwind CSS |
 | Real-time | Socket.io |
-| Frontend | React (Vite) + TailwindCSS |
-| Auth | Passport.js (local strategy v1, OAuth v2) |
 | Containerization | Docker + Docker Compose |
-| Reverse proxy | Nginx (in compose) |
-
----
-
-## Data Model (high level)
-
-```
-User           — id, email, password_hash, name, unit_preference, created_at
-Baby           — id, name, dob, sex, photo_url, created_at
-BabyCaregiver  — baby_id, user_id, role, invited_at, accepted_at
-FeedingEvent   — id, baby_id, logged_by, type, side, duration_min, amount, milk_type, started_at, ended_at, notes
-DiaperEvent    — id, baby_id, logged_by, type, color, occurred_at, notes
-SleepEvent     — id, baby_id, logged_by, type, location, started_at, ended_at, notes
-GrowthRecord   — id, baby_id, logged_by, weight, length, head_circ, measured_at, notes
-MedicationEvent— id, baby_id, logged_by, name, dose, unit, occurred_at, notes
-Milestone      — id, baby_id, logged_by, title, description, photo_url, occurred_at
-Appointment    — id, baby_id, logged_by, date, doctor, type, notes
-VaccineRecord  — id, baby_id, logged_by, vaccine_name, dose_number, lot_number, administered_at, appointment_id?, notes
-```
+| Reverse proxy (self-hosted) | Nginx |
+| Reverse proxy (cloud) | Traefik (wildcard SSL) |
+| Cache | Redis |
+| Billing | Stripe |
+| Email (cloud) | Resend / Postmark |
+| Email (self-hosted) | SMTP (user-configured) |
 
 ---
 
 ## Phased Roadmap
 
-### Phase 1 — Core (MVP)
-- Docker Compose setup (Node + Postgres + Nginx)
-- Auth (email/password, JWT, invite links)
-- Baby profiles (multi-baby)
-- Log: Feedings, Diapers, Sleep (with timers)
-- At-a-glance dashboard cards
-- Mobile-first UI
+### Phase 1 — Core MVP ✓
+Docker setup, auth, baby profiles, feedings/diapers/sleep logging, mobile UI.
 
-### Phase 2 — Full Tracking + Dashboard
-- Log: Growth, Medications, Milestones
-- All dashboard charts
-- Recent activity feed with filter/edit/delete
-- Unit preference (metric/imperial)
+### Phase 2 — Full Tracking + Dashboard ✓
+Growth, medications, milestones, appointments, vaccines, charts, unit preferences.
 
-### Phase 3 — Polish & Sharing
-- Real-time sync via WebSockets
-- CSV export
-- OAuth (Google, Apple)
-- Photo uploads for milestones
-- PWA support (installable on home screen, offline at-a-glance)
+### Phase 3 — Polish & Sharing ✓
+PWA, real-time sync, CSV export, email via SMTP.
+
+### Phase 4 — Cloud Infrastructure
+Multi-tenant schema, RLS, tenant middleware, subdomain routing, provisioning service,
+Stripe integration, landing page, customer dashboard.
+
+### Phase 5 — Growth & Hardening
+Security upgrades (mTLS), annual plans, referral program, affiliate program,
+monitor v2 for cloud, multi-region support.
 
 ---
 
-## Non-Goals (explicit out of scope)
+## Non-Goals
 
 - Native iOS/Android apps (PWA covers mobile)
 - Medical advice or percentile charts (growth tracking only)
-- Billing or multi-tenant SaaS features
 - Public-facing baby pages / social sharing
+- Photo uploads for milestones (deferred indefinitely)
+- Apple Sign-In (deferred to post-launch)

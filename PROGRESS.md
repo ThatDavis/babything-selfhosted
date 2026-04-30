@@ -1,196 +1,125 @@
 # Babything — Build Progress
 
-> Reference `REQUIREMENTS.md` for full feature specs and data model.
-> Update this file at the end of every session or after completing a task.
+> What has been built and what's next.
+>
+> - Feature specs: `REQUIREMENTS.md`
+> - Architecture & subscription plan: `SUBSCRIPTION_ROADMAP.md`
+> - Git workflow: `DEVELOPMENT.md`
 
 ---
 
-## Current Status: Phase 3 — In Progress
+## Current Status
 
-**Last updated:** 2026-04-27  
-**Current task:** Starting Phase 3 scaffolding
+**Self-hosted Phase 3 — Nearly Complete**
 
----
+All core polish features are done. One item remains (dedicated Google OAuth strategy)
+before moving to the cloud migration.
 
-## Confirmed Decisions
-
-- **Frontend:** React + Vite + TailwindCSS
-- **Backend:** Node.js + Express (or Fastify — decide at scaffold)
-- **ORM:** Prisma
-- **DB:** PostgreSQL
-- **Real-time:** Socket.io (Phase 3)
-- **Auth:** Email/password + JWT v1, OAuth v2
-- **Container:** Docker Compose (Node + Postgres + Nginx)
-- **Units:** User preference toggle (metric/imperial) — implement in Phase 2
-- **Feed timer:** Two caregivers can log simultaneously (no blocking)
-
-## Confirmed Decisions (continued)
-
-- Framework: Express
-- Port config: frontend :5173 (Vite dev), backend :3001, Nginx :80 (prod)
-- Auth: 24h JWT in localStorage (single token, no refresh — fine for private use)
+**Next major phase:** Cloud Infrastructure (multi-tenant SaaS)
 
 ---
 
-## Phase 1 — Core MVP
+## Completed Phases
 
-### Tasks
+### Phase 1 — Core MVP ✓
 
-- [x] Repo structure & Docker Compose scaffold
-  - [x] `docker-compose.yml` (postgres, api, nginx, frontend)
-  - [x] `Dockerfile` for api
-  - [x] `Dockerfile` for frontend (prod build served by Nginx)
-  - [x] Nginx config (reverse proxy + SPA fallback)
-  - [x] `.env.example`
-  - [x] `.gitignore`
-- [x] Database — Prisma schema
-  - [x] `User` model
-  - [x] `Baby` model
-  - [x] `BabyCaregiver` join model (roles: OWNER | CAREGIVER)
-  - [x] `FeedingEvent` model
-  - [x] `DiaperEvent` model
-  - [x] `SleepEvent` model
-  - [x] `InviteToken` model
-  - [ ] Initial migration (run `npx prisma migrate dev` locally to generate)
-- [x] Backend — Auth
-  - [x] POST `/auth/register`
-  - [x] POST `/auth/login`
-  - [x] GET `/auth/me`
-  - [x] JWT middleware
-  - [x] POST `/auth/invite` — generate invite token (Owner only)
-  - [x] GET `/auth/invite/:token` — inspect invite
-  - [x] POST `/auth/invite/:token/accept` — accept invite
-- [x] Backend — Babies
-  - [x] POST `/babies`
-  - [x] GET `/babies`
-  - [x] GET `/babies/:id` (with caregivers)
-  - [x] PATCH `/babies/:id` (Owner only)
-  - [x] DELETE `/babies/:babyId/caregivers/:userId` (Owner only)
-  - [x] GET `/babies/:id/dashboard`
-- [x] Backend — Events (per baby, auth-gated)
-  - [x] Feedings: full CRUD with caregiver-scoped delete
-  - [x] Diapers: full CRUD with caregiver-scoped delete
-  - [x] Sleep: full CRUD with caregiver-scoped delete
-  - [x] GET `/babies/:id/events` — unified recent activity feed
-- [x] Frontend — Auth screens
-  - [x] Register page
-  - [x] Login page
-  - [x] Accept invite page
-- [x] Frontend — Baby selection
-  - [x] Baby pill switcher in header
-  - [x] Add baby bottom sheet
-- [x] Frontend — Mobile home (at-a-glance + quick-log)
-  - [x] At-a-glance cards (last feed, last diaper, sleep status)
-  - [x] Quick-log buttons → bottom sheet per type
-  - [x] Feed bottom sheet (breast/bottle, side, timer, amount)
-  - [x] Diaper bottom sheet (type, color)
-  - [x] Sleep bottom sheet (start timer / end active sleep)
-- [x] Frontend — Recent activity feed (grouped by day, caregiver name)
-- [ ] Frontend — Responsive desktop layout (sidebar nav)
+- [x] Docker Compose setup (Postgres + API + Nginx + Web)
+- [x] Auth: register, login, JWT middleware, invite links
+- [x] Baby profiles with caregiver roles (Owner / Caregiver)
+- [x] Event logging: feedings, diapers, sleep
+- [x] At-a-glance dashboard cards
+- [x] Mobile-first UI with quick-log bottom sheets
+- [x] Responsive desktop layout (sidebar + pill nav)
+- [x] First-run setup wizard
 
-- [x] DELETE `/babies/:id` (Owner only — cascades all events)
-- [x] BabySettings sheet — invite generation, caregiver list/remove, delete baby with confirm
-- [x] Responsive desktop sidebar layout (persistent sidebar on md+, pill nav on mobile)
-- [x] First-run setup wizard (3 steps: account → baby → done; gated by `/auth/setup`)
-- [x] Friendly inline DOB validation (removed native `max` tooltip)
+### Phase 2 — Full Tracking + Dashboard ✓
 
-### Phase 1 — COMPLETE ✓
+- [x] Growth, medications, milestones, appointments, vaccines
+- [x] CDC vaccination schedule with due/overdue/complete status
+- [x] Dashboard charts (recharts): feeds 24h, diapers 7d, sleep 7d, weight trend
+- [x] Recent activity feed with filtering
+- [x] Unit preference toggle (metric / imperial)
+- [x] PDF pediatric report generation
 
-## Updated Plan
+### Phase 3 — Polish & Sharing ✓ (mostly)
 
-After completing Phase 3, the project will move to the **Subscription Service** architecture (see `SUBSCRIPTION_ROADMAP.md`):
-1. Finish remaining Phase 3 features (PWA, real-time sync, CSV export, Google OAuth, SMTP email)
-2. Multi-tenant cloud migration (schema, RLS, tenant middleware, provisioning service)
-3. Launch cloud beta → public launch
-
-### Out of Scope
-- Photo uploads for milestones — removed from plan
-- OAuth — Apple — deferred to post-launch
+- [x] PWA manifest + icons
+- [x] Real-time sync via Socket.io
+- [x] CSV export (ZIP with one CSV per event type, date range filter)
+- [x] Email via SMTP (Nodemailer) — invites, password resets, reports
+- [ ] OAuth — Google (dedicated Passport.js strategy)
+- [ ] ~~OAuth — Apple~~ — Deferred to post-launch
+- [ ] ~~Photo uploads for milestones~~ — Out of scope
 
 ---
 
-## Phase 2 — Full Tracking + Dashboard — COMPLETE ✓
+## Phase 4 — Cloud Infrastructure (In Progress)
 
-- [x] Prisma models: `GrowthRecord`, `MedicationEvent`, `Milestone`, `Appointment`, `VaccineRecord`
-- [x] Backend CRUD for growth, medications, milestones, appointments, vaccines
-- [x] Stats endpoint for chart data (feedings 24h, diapers/sleep/growth 7d)
-- [x] Health tab — growth measurements + medication log with common-item shortcuts
-- [x] Vaccines tab — CDC schedule with complete/due/overdue/upcoming status, appointment log, vaccine linking
-- [x] Milestones tab — milestone log with common milestone shortcuts
-- [x] Dashboard charts — feeds/24h bar, diapers/7d bar, sleep hours/7d bar, weight trend line (recharts)
-- [x] Bottom tab bar (mobile) + sidebar section links (desktop)
+### Schema & Multi-Tenancy
+
+- [ ] Add `Tenant` model to Prisma schema
+- [ ] Add `tenantId` to `User`, `Baby`, and all event tables
+- [ ] Refactor `SystemSettings` to be per-tenant
+- [ ] Implement PostgreSQL RLS policies for tenant isolation
+- [ ] Add tenant resolution middleware (subdomain → tenant lookup)
+
+### Mode Switch
+
+- [ ] `DEPLOYMENT_MODE=selfhosted|cloud` environment variable
+- [ ] Self-hosted mode: preserves current behavior (global settings)
+- [ ] Cloud mode: tenant-scoped queries, no SMTP config, no monitor tab
+
+### Provisioning Service
+
+- [ ] Provisioning service scaffold (`platform/provisioning/`)
+- [ ] Prisma schema: `Customer`, `TenantSubscription`
+- [ ] Stripe webhook handlers: checkout, invoice, cancellation
+- [ ] Internal API: push tenant creation/status to main app
+- [ ] Redis cache for tenant status lookups
+
+### Landing & Customer Dashboard
+
+- [ ] Landing page with pricing
+- [ ] Signup flow: email → subdomain → Stripe Checkout → provision
+- [ ] Customer dashboard: manage subscription, update payment, cancel, export data
+- [ ] Platform-managed Google OAuth with subdomain callback routing
+
+### Operations
+
+- [ ] Traefik reverse proxy with wildcard SSL
+- [ ] Automated nightly backups (pg_dump to S3)
+- [ ] Operator dashboard for monitoring tenants
+- [ ] Self-hosted → cloud data migration (JSON bundle import)
 
 ---
 
-## Phase 3 — Polish & Sharing
+## Phase 5 — Growth & Hardening (Planned)
 
-### Tasks
-
-- [x] PWA manifest + icons (installable on home screen)
-- [x] Real-time sync via Socket.io (push event changes to all caregivers in the same baby room)
-- [x] CSV export (per event type or full export, date range picker)
-- [ ] OAuth — Google (Passport.js local → Google strategy)
-- [ ] OAuth — Apple
-- [ ] ~~Photo uploads for milestones~~ — Out of scope for now
-- [x] Email via SMTP (Nodemailer) — invite links and password reset
+- [ ] Replace shared API key with mTLS between services
+- [ ] Annual plan promotion
+- [ ] Referral program
+- [ ] Affiliate program
+- [ ] Monitor v2 for cloud (WebRTC)
+- [ ] Multi-region deployment
 
 ---
 
-## Project Structure (target)
+## Quick Stats
 
-```
-babything/
-├── docker-compose.yml
-├── .env.example
-├── nginx/
-│   └── nginx.conf
-├── api/
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── migrations/
-│   └── src/
-│       ├── index.ts
-│       ├── routes/
-│       │   ├── auth.ts
-│       │   ├── babies.ts
-│       │   ├── feedings.ts
-│       │   ├── diapers.ts
-│       │   └── sleep.ts
-│       ├── middleware/
-│       │   └── auth.ts
-│       └── lib/
-│           └── prisma.ts
-└── web/
-    ├── Dockerfile
-    ├── package.json
-    ├── vite.config.ts
-    └── src/
-        ├── main.tsx
-        ├── App.tsx
-        ├── pages/
-        │   ├── Login.tsx
-        │   ├── Register.tsx
-        │   ├── Home.tsx        ← mobile dashboard
-        │   └── Dashboard.tsx   ← desktop dashboard
-        ├── components/
-        │   ├── AtAGlanceCard.tsx
-        │   ├── QuickLogSheet.tsx
-        │   ├── FeedSheet.tsx
-        │   ├── DiaperSheet.tsx
-        │   ├── SleepSheet.tsx
-        │   └── ActivityFeed.tsx
-        └── lib/
-            ├── api.ts
-            └── auth.ts
-```
+| Phase | Status | Completed | Remaining |
+|-------|--------|-----------|-----------|
+| Phase 1 — Core MVP | ✅ Complete | 8/8 | 0 |
+| Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
+| Phase 3 — Polish | 🟡 Nearly done | 4/5 | 1 |
+| Phase 4 — Cloud | 🔵 Not started | 0/13 | 13 |
+| Phase 5 — Growth | ⚪ Planned | 0/6 | 6 |
 
 ---
 
 ## How to Resume
 
-1. Read `REQUIREMENTS.md` for full feature specs
-2. Read this file for current task and decisions
-3. Check git log for what's been committed
-4. Pick up from the first unchecked item in the current phase
+1. Read `REQUIREMENTS.md` for feature specs
+2. Read `SUBSCRIPTION_ROADMAP.md` for cloud architecture decisions
+3. Read `DEVELOPMENT.md` for git workflow standards
+4. Check git log for recent commits
+5. Pick up from the first unchecked item above
