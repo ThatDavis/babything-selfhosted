@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# finish-feature — Merge a completed feature branch back into main
+#
+# Usage: ./scripts/finish-feature
+# Must be run from a feature branch. Squash merges to main for clean history.
+
+CURRENT_BRANCH=$(git branch --show-current)
+
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  echo "❌ You are on main. This must be run from a feature branch."
+  echo "   Current branch: $CURRENT_BRANCH"
+  exit 1
+fi
+
+if [[ ! "$CURRENT_BRANCH" =~ ^feature/ ]]; then
+  echo "⚠️  You are on '$CURRENT_BRANCH', which does not look like a feature branch."
+  read -p "Continue anyway? [y/N] " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+  fi
+fi
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+  echo "❌ You have uncommitted changes. Commit or stash them first."
+  git status --short
+  exit 1
+fi
+
+# Show summary of commits on this branch
+echo "📋 Commits on $CURRENT_BRANCH:"
+git log --oneline main.."$CURRENT_BRANCH"
+echo ""
+
+read -p "Ready to squash merge '$CURRENT_BRANCH' into main? [y/N] " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  echo "Aborted."
+  exit 1
+fi
+
+# Store branch name before switching
+BRANCH="$CURRENT_BRANCH"
+
+# Checkout main and pull latest
+echo "📥 Switching to main and pulling latest..."
+git checkout main
+git pull origin main
+
+# Squash merge the feature branch
+echo "🔀 Squash merging $BRANCH into main..."
+git merge --squash "$BRANCH"
+
+# Prompt for the final commit message
+echo ""
+echo "Enter the final commit message for this feature:"
+read -p "> " FINAL_MSG
+
+if [ -z "$FINAL_MSG" ]; then
+  FINAL_MSG="feat: merge $BRANCH"
+fi
+
+git commit -m "$FINAL_MSG"
+
+echo ""
+echo "✅ Feature merged. Last 3 commits on main:"
+git log --oneline -3
+
+echo ""
+read -p "Push main to origin? [Y/n] " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+  git push origin main
+fi
+
+echo ""
+read -p "Delete local branch '$BRANCH'? [Y/n] " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+  git branch -D "$BRANCH"
+  echo "🗑️  Branch deleted."
+fi
+
+echo ""
+echo "🎉 Feature complete!"

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# hotfix — Create a hotfix branch from main for urgent production fixes
+#
+# Usage: ./scripts/hotfix <description>
+# Example: ./scripts/hotfix fix-login-redirect
+
+DESC="${1:-}"
+
+if [ -z "$DESC" ]; then
+  echo "Usage: $0 <description>"
+  echo "Example: $0 fix-login-redirect"
+  exit 1
+fi
+
+DESC=$(echo "$DESC" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9_-]//g')
+BRANCH="hotfix/${DESC}"
+
+# Ensure clean main
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "⚠️  You are on '$CURRENT_BRANCH'. Switching to main..."
+  git checkout main
+fi
+
+if ! git diff-index --quiet HEAD --; then
+  echo "❌ You have uncommitted changes. Commit or stash them first."
+  exit 1
+fi
+
+echo "📥 Pulling latest main..."
+git pull origin main
+
+echo "🩹 Creating hotfix branch: $BRANCH"
+git checkout -b "$BRANCH"
+
+echo "✅ Hotfix branch ready."
+echo ""
+echo "Hotfix rules:"
+echo "  • One fix per branch"
+echo "  • Fast commit with: ./scripts/commit"
+echo "  • Fast merge with: ./scripts/finish-hotfix"

@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# commit — Stage and commit with a conventional commit message
+#
+# Usage: ./scripts/commit
+# Interactively prompts for commit type, scope, and message.
+
+# Show current status
+echo "📋 Current changes:"
+git status --short
+
+if ! git diff-index --quiet HEAD -- || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+  echo ""
+else
+  echo ""
+  echo "✨ No changes to commit."
+  exit 0
+fi
+
+# Prompt for commit type
+echo ""
+echo "Select commit type:"
+echo "  1) feat     — A new feature"
+echo "  2) fix      — A bug fix"
+echo "  3) docs     — Documentation only changes"
+echo "  4) style    — Code style changes (formatting, semicolons, etc)"
+echo "  5) refactor — Code change that neither fixes a bug nor adds a feature"
+echo "  6) test     — Adding or correcting tests"
+echo "  7) chore    — Changes to build process, dependencies, etc"
+read -p "Type [1-7]: " TYPE_NUM
+
+case "$TYPE_NUM" in
+  1) TYPE="feat" ;;
+  2) TYPE="fix" ;;
+  3) TYPE="docs" ;;
+  4) TYPE="style" ;;
+  5) TYPE="refactor" ;;
+  6) TYPE="test" ;;
+  7) TYPE="chore" ;;
+  *) TYPE="feat" ;;
+esac
+
+# Prompt for scope
+read -p "Scope (e.g. api, web, auth, csv): " SCOPE
+
+# Prompt for message
+read -p "Short description: " DESC
+
+if [ -z "$DESC" ]; then
+  echo "❌ Description is required."
+  exit 1
+fi
+
+# Build commit message
+if [ -n "$SCOPE" ]; then
+  MSG="${TYPE}(${SCOPE}): ${DESC}"
+else
+  MSG="${TYPE}: ${DESC}"
+fi
+
+# Stage all changes
+echo ""
+read -p "Stage all changes? [Y/n] " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+  git add -A
+fi
+
+# Commit
+echo "📝 Committing: $MSG"
+git commit -m "$MSG"
+
+echo "✅ Committed."
+echo ""
+git log --oneline -3

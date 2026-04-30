@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# start-feature — Create a new feature branch from latest main
+#
+# Usage: ./scripts/start-feature <feature-name>
+# Example: ./scripts/start-feature csv-export
+
+FEATURE_NAME="${1:-}"
+
+if [ -z "$FEATURE_NAME" ]; then
+  echo "Usage: $0 <feature-name>"
+  echo "Example: $0 csv-export"
+  exit 1
+fi
+
+# Sanitize feature name: lowercase, replace spaces with hyphens, remove special chars
+FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9_-]//g')
+BRANCH="feature/${FEATURE_NAME}"
+
+# Ensure we're on main and it's clean
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "⚠️  You are on '$CURRENT_BRANCH', not 'main'."
+  read -p "Switch to main and pull latest? [Y/n] " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    git checkout main
+  else
+    echo "Aborted."
+    exit 1
+  fi
+fi
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+  echo "❌ You have uncommitted changes. Commit or stash them first."
+  git status --short
+  exit 1
+fi
+
+echo "📥 Pulling latest main..."
+git pull origin main
+
+echo "🌿 Creating branch: $BRANCH"
+git checkout -b "$BRANCH"
+
+echo "✅ Ready to work on $BRANCH"
+echo ""
+echo "Next steps:"
+echo "  1. Make small, focused changes"
+echo "  2. Commit often with: ./scripts/commit"
+echo "  3. When done, run: ./scripts/finish-feature"
