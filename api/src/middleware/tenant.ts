@@ -23,6 +23,7 @@ async function resolveDefaultTenant(): Promise<TenantInfo> {
 
 export async function tenantResolver(req: Request, res: Response, next: NextFunction) {
   if (req.path === '/health') return next()
+  if (req.path.startsWith('/internal/')) return next()
 
   try {
     if (isSelfHosted()) {

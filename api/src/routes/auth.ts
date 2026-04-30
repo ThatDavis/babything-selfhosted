@@ -281,6 +281,7 @@ router.get('/invite/:token', async (req, res) => {
 router.get('/config', async (_req, res) => {
   res.json({
     googleEnabled: !!process.env.GOOGLE_CLIENT_ID,
+    deploymentMode: process.env.DEPLOYMENT_MODE ?? 'selfhosted',
   })
 })
 

@@ -20,6 +20,7 @@ import appointmentsRouter from './routes/appointments.js'
 import vaccinesRouter from './routes/vaccines.js'
 import statsRouter from './routes/stats.js'
 import reportsRouter from './routes/reports.js'
+import internalRouter from './routes/internal.js'
 
 // Validate secrets before booting
 function validateSecrets() {
@@ -93,6 +94,7 @@ app.use('/babies/:babyId/appointments', appointmentsRouter)
 app.use('/babies/:babyId/vaccines', vaccinesRouter)
 app.use('/babies/:babyId/stats', statsRouter)
 app.use('/babies/:babyId', reportsRouter)
+app.use('/internal', internalRouter)
 
 const port = Number(process.env.PORT ?? 3001)
 httpServer.listen(port, () => console.log(`api listening on :${port}`))

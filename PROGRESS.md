@@ -67,7 +67,7 @@ before moving to the cloud migration.
 
 - [x] `DEPLOYMENT_MODE=selfhosted|cloud` environment variable
 - [x] Self-hosted mode: preserves current behavior (global settings)
-- [ ] Cloud mode: tenant-scoped queries, no SMTP config, no monitor tab
+- [x] Cloud mode: tenant-scoped queries, no SMTP config, no monitor tab
 
 ### Provisioning Service
 
