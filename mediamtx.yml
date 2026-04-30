@@ -1,0 +1,20 @@
+logLevel: warn
+
+# ── HLS output ────────────────────────────────────────────────────────────────
+hls: yes
+hlsAddress: :8888
+hlsEncryption: no
+hlsSegmentCount: 3
+hlsSegmentDuration: 2s
+hlsPartDuration: 200ms
+hlsAllowOrigins: ['*']
+
+# ── RTSP input ────────────────────────────────────────────────────────────────
+rtsp: yes
+rtspAddress: :8554
+
+# ── Disable unused protocols ──────────────────────────────────────────────────
+webrtc: no
+srt: no
+
+# Paths are configured via MTX_PATHS_* environment variables in docker-compose

@@ -1,0 +1,288 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String?
+  name          String
+  isAdmin       Boolean  @default(false)
+  oauthProvider String?
+  oauthId       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  babies              BabyCaregiver[]
+  feedings            FeedingEvent[]
+  diapers             DiaperEvent[]
+  sleepEvents         SleepEvent[]
+  growthRecords       GrowthRecord[]
+  medications         MedicationEvent[]
+  milestones          Milestone[]
+  appointments        Appointment[]
+  vaccines            VaccineRecord[]
+  invitesSent         InviteToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([oauthProvider, oauthId])
+}
+
+model Baby {
+  id        String   @id @default(cuid())
+  name      String
+  dob       DateTime
+  sex       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  caregivers    BabyCaregiver[]
+  feedings      FeedingEvent[]
+  diapers       DiaperEvent[]
+  sleepEvents   SleepEvent[]
+  growthRecords GrowthRecord[]
+  medications   MedicationEvent[]
+  milestones    Milestone[]
+  appointments  Appointment[]
+  vaccines      VaccineRecord[]
+  invites       InviteToken[]
+}
+
+model BabyCaregiver {
+  babyId     String
+  userId     String
+  role       Role     @default(CAREGIVER)
+  invitedAt  DateTime @default(now())
+  acceptedAt DateTime?
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([babyId, userId])
+}
+
+enum Role {
+  OWNER
+  CAREGIVER
+}
+
+model InviteToken {
+  token     String    @id
+  babyId    String
+  email     String
+  role      Role      @default(CAREGIVER)
+  createdBy String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  baby    Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+}
+
+model FeedingEvent {
+  id          String    @id @default(cuid())
+  babyId      String
+  loggedBy    String
+  type        FeedType
+  side        String?
+  durationMin Int?
+  amount      Float?
+  milkType    String?
+  startedAt   DateTime
+  endedAt     DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [loggedBy], references: [id])
+}
+
+enum FeedType {
+  BREAST
+  BOTTLE
+}
+
+model DiaperEvent {
+  id         String     @id @default(cuid())
+  babyId     String
+  loggedBy   String
+  type       DiaperType
+  color      String?
+  occurredAt DateTime
+  notes      String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [loggedBy], references: [id])
+}
+
+enum DiaperType {
+  WET
+  DIRTY
+  BOTH
+  DRY
+}
+
+model SleepEvent {
+  id        String     @id @default(cuid())
+  babyId    String
+  loggedBy  String
+  type      SleepType
+  location  String?
+  startedAt DateTime
+  endedAt   DateTime?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [loggedBy], references: [id])
+}
+
+enum SleepType {
+  NAP
+  NIGHT
+}
+
+model GrowthRecord {
+  id         String   @id @default(cuid())
+  babyId     String
+  loggedBy   String
+  weight     Float?
+  length     Float?
+  headCirc   Float?
+  measuredAt DateTime
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [loggedBy], references: [id])
+}
+
+model MedicationEvent {
+  id         String   @id @default(cuid())
+  babyId     String
+  loggedBy   String
+  name       String
+  dose       Float
+  unit       String
+  occurredAt DateTime
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [loggedBy], references: [id])
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  babyId      String
+  loggedBy    String
+  title       String
+  description String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  baby Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [loggedBy], references: [id])
+}
+
+model Appointment {
+  id        String          @id @default(cuid())
+  babyId    String
+  loggedBy  String
+  date      DateTime
+  doctor    String?
+  type      AppointmentType @default(WELL_VISIT)
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  baby     Baby            @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [loggedBy], references: [id])
+  vaccines VaccineRecord[]
+}
+
+enum AppointmentType {
+  WELL_VISIT
+  SICK_VISIT
+  SPECIALIST
+  OTHER
+}
+
+model VaccineRecord {
+  id             String   @id @default(cuid())
+  babyId         String
+  loggedBy       String
+  vaccineName    String
+  doseNumber     Int?
+  lotNumber      String?
+  administeredAt DateTime
+  appointmentId  String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  baby        Baby         @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [loggedBy], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OAuthProvider {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  label            String
+  clientId         String
+  clientSecret     String
+  authorizationUrl String
+  tokenUrl         String
+  userInfoUrl      String
+  scope            String   @default("openid email profile")
+  enabled          Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model SmtpConfig {
+  id        String   @id @default(cuid())
+  host      String
+  port      Int      @default(587)
+  secure    Boolean  @default(false)
+  user      String
+  password  String
+  fromEmail String
+  fromName  String   @default("Babything")
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemSettings {
+  id            String   @id @default("default")
+  unitSystem    String   @default("metric")
+  streamEnabled Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+}
