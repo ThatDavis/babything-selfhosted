@@ -11,6 +11,8 @@ import { sendInviteEmail, sendPasswordResetEmail } from '../lib/mailer.js'
 import { decryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 import { getTenantId } from '../lib/tenant-context.js'
+import { isCloud } from '../lib/mode.js'
+import { extractSubdomain } from '../lib/subdomain.js'
 
 const router = Router()
 
@@ -59,10 +61,16 @@ if (googleClientId && googleClientSecret) {
                 data: { oauthProvider: 'google', oauthId },
               })
             } else {
-              const count = await prisma.user.count()
-              user = await prisma.user.create({
-                data: { email, name, oauthProvider: 'google', oauthId, isAdmin: count === 0, tenantId: getTenantId()! },
-              })
+              const tenantId = getTenantId()
+              if (tenantId) {
+                const count = await prisma.user.count()
+                user = await prisma.user.create({
+                  data: { email, name, oauthProvider: 'google', oauthId, isAdmin: count === 0, tenantId },
+                })
+              } else {
+                // Cloud callback without tenant context - return candidate for downstream handling
+                return done(null, { _candidate: true, email, name, oauthId, oauthProvider: 'google' } as any)
+              }
             }
           }
 
@@ -109,6 +117,7 @@ const COOKIE_OPTS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  domain: process.env.COOKIE_DOMAIN,
 }
 
 // ── Setup check ──────────────────────────────────────────
@@ -282,6 +291,7 @@ router.get('/config', async (_req, res) => {
   res.json({
     googleEnabled: !!process.env.GOOGLE_CLIENT_ID,
     deploymentMode: process.env.DEPLOYMENT_MODE ?? 'selfhosted',
+    cookieDomain: process.env.COOKIE_DOMAIN ?? null,
   })
 })
 
@@ -291,23 +301,77 @@ router.get('/oauth/google/start', (req, res, next) => {
     res.status(404).json({ error: 'Google OAuth not configured' })
     return
   }
+  let state: string | undefined
+  if (isCloud()) {
+    const host = req.headers.host ?? ''
+    const subdomain = extractSubdomain(host)
+    if (!subdomain) {
+      res.status(400).json({ error: 'Tenant subdomain required' })
+      return
+    }
+    state = jwt.sign({ subdomain }, process.env.INVITE_SECRET!, { expiresIn: '10m' })
+  }
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account',
+    ...(state ? { state } : {}),
   })(req, res, next)
 })
 
 router.get('/oauth/google/callback', (req, res, next) => {
-  passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
-    if (err || !user) {
+  passport.authenticate('google', { session: false }, async (err: any, user: any, info: any) => {
+    if (err) {
       console.error('Google OAuth error:', err, info)
       res.redirect('/login?error=oauth')
       return
     }
+
+    let redirectUrl = '/'
+
+    if (user?._candidate) {
+      const state = req.query.state as string
+      if (!state) { res.redirect('/login?error=missing_state'); return }
+      try {
+        const payload = jwt.verify(state, process.env.INVITE_SECRET!) as { subdomain: string }
+        const tenant = await prisma.tenant.findUnique({ where: { subdomain: payload.subdomain } })
+        if (!tenant) { res.redirect('/login?error=invalid_tenant'); return }
+
+        let existingUser = await prisma.user.findFirst({ where: { email: user.email } })
+        if (existingUser && existingUser.tenantId !== tenant.id) {
+          res.redirect('/login?error=email_used_in_other_tenant')
+          return
+        }
+
+        if (!existingUser) {
+          const count = await prisma.user.count({ where: { tenantId: tenant.id } })
+          existingUser = await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name,
+              oauthProvider: user.oauthProvider,
+              oauthId: user.oauthId,
+              isAdmin: count === 0,
+              tenantId: tenant.id,
+            }
+          })
+        }
+
+        user = existingUser
+        redirectUrl = `https://${payload.subdomain}.babything.app/`
+      } catch (e) {
+        console.error('OAuth callback error:', e)
+        res.redirect('/login?error=oauth')
+        return
+      }
+    } else if (!user) {
+      res.redirect('/login?error=oauth')
+      return
+    }
+
     const token = signToken(user.id)
     res.cookie('session', token, COOKIE_OPTS)
     audit(req, 'oauth_login', 'success', { actor: user.id, details: { provider: 'google' } })
-    res.redirect('/')
+    res.redirect(redirectUrl)
   })(req, res, next)
 })
 

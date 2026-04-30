@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Nightly backup script for Babything cloud PostgreSQL
+# Usage: ./scripts/backup [s3-bucket-name]
+
+BUCKET="${1:-}"
+DATE=$(date +%Y%m%d_%H%M%S)
+DUMP_FILE="babything_backup_${DATE}.sql.gz"
+
+if [ -z "$BUCKET" ]; then
+  echo "Usage: $0 <s3-bucket-name>"
+  echo "Example: $0 s3://babything-backups"
+  exit 1
+fi
+
+echo "📦 Creating PostgreSQL dump..."
+docker compose -f docker-compose.cloud.yml exec -T postgres pg_dump \
+  -U "${POSTGRES_USER:-babything}" \
+  -d "${POSTGRES_DB:-babything}" \
+  --clean --if-exists | gzip > "/tmp/${DUMP_FILE}"
+
+echo "☁️  Uploading to S3..."
+aws s3 cp "/tmp/${DUMP_FILE}" "${BUCKET}/${DUMP_FILE}"
+
+rm -f "/tmp/${DUMP_FILE}"
+
+echo "✅ Backup uploaded: ${BUCKET}/${DUMP_FILE}"
+
+# Retention: keep last 30 days
+echo "🧹 Cleaning up old backups (>30 days)..."
+aws s3 ls "${BUCKET}/" | awk '$1 < "'$(date -d '30 days ago' +%Y-%m-%d)'" {print $4}' | \
+  while read -r old; do
+    aws s3 rm "${BUCKET}/${old}"
+  done
+
+echo "🎉 Backup complete."

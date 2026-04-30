@@ -358,4 +358,112 @@ router.post('/seed', ...guard, async (req, res) => {
   res.status(201).json({ ok: true, babyId: bid, babyName: baby.name })
 })
 
+// ── Operator dashboard (cloud only) ───────────────────────
+router.get('/tenants', ...guard, async (_req, res) => {
+  const tenants = await prisma.tenant.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: { select: { users: true, babies: true } },
+    },
+  })
+  res.json(tenants)
+})
+
+// ── Export (self-hosted → cloud migration) ────────────────
+router.post('/export', ...guard, async (_req, res) => {
+  const tenantId = getTenantId()!
+  const [users, babies, feedings, diapers, sleepEvents, growthRecords, medications, milestones, appointments, vaccines, settings] = await Promise.all([
+    prisma.user.findMany({ where: { tenantId } }),
+    prisma.baby.findMany({ where: { tenantId }, include: { caregivers: true } }),
+    prisma.feedingEvent.findMany({ where: { tenantId } }),
+    prisma.diaperEvent.findMany({ where: { tenantId } }),
+    prisma.sleepEvent.findMany({ where: { tenantId } }),
+    prisma.growthRecord.findMany({ where: { tenantId } }),
+    prisma.medicationEvent.findMany({ where: { tenantId } }),
+    prisma.milestone.findMany({ where: { tenantId } }),
+    prisma.appointment.findMany({ where: { tenantId } }),
+    prisma.vaccineRecord.findMany({ where: { tenantId } }),
+    prisma.systemSettings.findUnique({ where: { tenantId } }),
+  ])
+
+  res.json({
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tenantId,
+    users,
+    babies,
+    feedings,
+    diapers,
+    sleepEvents,
+    growthRecords,
+    medications,
+    milestones,
+    appointments,
+    vaccines,
+    settings,
+  })
+})
+
+// ── Import (cloud only) ───────────────────────────────────
+router.post('/import', ...guard, async (req, res) => {
+  const bundle = req.body
+  if (!bundle || bundle.version !== 1) {
+    res.status(400).json({ error: 'Invalid bundle format' })
+    return
+  }
+
+  const tenantId = getTenantId()!
+
+  // Upsert users (skip existing by id)
+  for (const u of bundle.users ?? []) {
+    const existing = await prisma.user.findUnique({ where: { id: u.id } })
+    if (!existing) {
+      await prisma.user.create({ data: { ...u, tenantId } })
+    }
+  }
+
+  // Upsert babies with caregivers
+  for (const b of bundle.babies ?? []) {
+    const existing = await prisma.baby.findUnique({ where: { id: b.id } })
+    if (!existing) {
+      const { caregivers, ...babyData } = b
+      await prisma.baby.create({
+        data: { ...babyData, tenantId, caregivers: { create: caregivers?.map((c: any) => ({ ...c, tenantId })) ?? [] } },
+      })
+    }
+  }
+
+  // Helper to bulk upsert event tables
+  const eventTables = [
+    { model: prisma.feedingEvent, data: bundle.feedings },
+    { model: prisma.diaperEvent, data: bundle.diapers },
+    { model: prisma.sleepEvent, data: bundle.sleepEvents },
+    { model: prisma.growthRecord, data: bundle.growthRecords },
+    { model: prisma.medicationEvent, data: bundle.medications },
+    { model: prisma.milestone, data: bundle.milestones },
+    { model: prisma.appointment, data: bundle.appointments },
+    { model: prisma.vaccineRecord, data: bundle.vaccines },
+  ]
+
+  for (const { model, data } of eventTables) {
+    for (const row of data ?? []) {
+      const existing = await (model as any).findUnique({ where: { id: row.id } })
+      if (!existing) {
+        await (model as any).create({ data: { ...row, tenantId } })
+      }
+    }
+  }
+
+  // Update settings
+  if (bundle.settings) {
+    await prisma.systemSettings.upsert({
+      where: { tenantId },
+      update: { unitSystem: bundle.settings.unitSystem, streamEnabled: false },
+      create: { tenantId, unitSystem: bundle.settings.unitSystem ?? 'metric', streamEnabled: false },
+    })
+  }
+
+  res.json({ ok: true, imported: bundle.users?.length ?? 0 })
+})
+
 export default router

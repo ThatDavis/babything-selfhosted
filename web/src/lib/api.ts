@@ -45,7 +45,7 @@ export const api = {
     resetPassword: (token: string, password: string) =>
       request<{ ok: boolean }>(`/auth/reset-password/${token}`, { method: 'POST', body: JSON.stringify({ password }) }),
     oauthProviders: () => request<OAuthProvider[]>('/auth/oauth-providers'),
-    config: () => request<{ googleEnabled: boolean; deploymentMode: string }>('/auth/config'),
+    config: () => request<{ googleEnabled: boolean; deploymentMode: string; cookieDomain: string | null }>('/auth/config'),
   },
   admin: {
     getSmtp: () => request<SmtpConfig | null>('/admin/smtp'),

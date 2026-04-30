@@ -75,21 +75,21 @@ before moving to the cloud migration.
 - [x] Prisma schema: `Customer`, `TenantSubscription`
 - [x] Stripe webhook handlers: checkout, invoice, cancellation
 - [x] Internal API: push tenant creation/status to main app
-- [ ] Redis cache for tenant status lookups
+- [x] Redis cache for tenant status lookups
 
 ### Landing & Customer Dashboard
 
-- [ ] Landing page with pricing
-- [ ] Signup flow: email → subdomain → Stripe Checkout → provision
-- [ ] Customer dashboard: manage subscription, update payment, cancel, export data
-- [ ] Platform-managed Google OAuth with subdomain callback routing
+- [x] Landing page with pricing
+- [x] Signup flow: email → subdomain → provision
+- [x] Customer dashboard: manage subscription, update payment, cancel, export data
+- [x] Platform-managed Google OAuth with subdomain callback routing
 
 ### Operations
 
-- [ ] Traefik reverse proxy with wildcard SSL
-- [ ] Automated nightly backups (pg_dump to S3)
-- [ ] Operator dashboard for monitoring tenants
-- [ ] Self-hosted → cloud data migration (JSON bundle import)
+- [x] Traefik reverse proxy with wildcard SSL
+- [x] Automated nightly backups (pg_dump to S3)
+- [x] Operator dashboard for monitoring tenants
+- [x] Self-hosted → cloud data migration (JSON bundle import)
 
 ---
 
