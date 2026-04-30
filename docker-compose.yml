@@ -57,6 +57,24 @@ services:
     depends_on:
       - api
 
+  provisioning:
+    build:
+      context: ./platform/provisioning
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      DATABASE_URL: file:./provisioning.db
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      MAIN_APP_URL: http://api:3001
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    volumes:
+      - provisioning_data:/app/data
+    depends_on:
+      - api
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -70,6 +88,8 @@ services:
       - api
       - web
       - mediamtx
+      - provisioning
 
 volumes:
   postgres_data:
+  provisioning_data:

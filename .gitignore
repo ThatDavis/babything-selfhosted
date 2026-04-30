@@ -1,5 +1,8 @@
 .env
 api/.env
+platform/provisioning/.env
 **/node_modules/
 **/dist/
 *.local
+*.db
+*.db-journal

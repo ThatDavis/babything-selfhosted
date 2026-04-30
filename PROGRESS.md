@@ -71,10 +71,10 @@ before moving to the cloud migration.
 
 ### Provisioning Service
 
-- [ ] Provisioning service scaffold (`platform/provisioning/`)
-- [ ] Prisma schema: `Customer`, `TenantSubscription`
-- [ ] Stripe webhook handlers: checkout, invoice, cancellation
-- [ ] Internal API: push tenant creation/status to main app
+- [x] Provisioning service scaffold (`platform/provisioning/`)
+- [x] Prisma schema: `Customer`, `TenantSubscription`
+- [x] Stripe webhook handlers: checkout, invoice, cancellation
+- [x] Internal API: push tenant creation/status to main app
 - [ ] Redis cache for tenant status lookups
 
 ### Landing & Customer Dashboard
