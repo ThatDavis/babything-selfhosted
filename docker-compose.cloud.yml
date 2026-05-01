@@ -1,40 +1,23 @@
-# Cloud deployment stack — Traefik + wildcard SSL + multi-tenant routing
+# Cloud deployment stack — nginx + multi-tenant routing
 # Usage: docker compose -f docker-compose.cloud.yml up -d
 #
 # Before first start, generate mTLS certs:
 #   ./scripts/generate-mtls-certs
+#
+# This stack is designed to run behind an external reverse proxy (nginx, Caddy,
+# cloud load balancer, etc.) that terminates TLS and forwards plain HTTP.
+# The included nginx service handles subdomain routing and path-based proxies.
+# Set TRUSTED_PROXIES so the API sees real client IPs.
+
+networks:
+  frontend:
+  backend:
 
 services:
-  traefik:
-    image: traefik:v3.1
-    restart: unless-stopped
-    command:
-      - --api.dashboard=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --entrypoints.web.http.redirections.entryPoint.to=websecure
-      - --entrypoints.web.http.redirections.entryPoint.scheme=https
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`operator.${ROOT_DOMAIN}`)"
-      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.middlewares=auth@file"
-
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    networks: [backend]
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -50,6 +33,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    networks: [backend]
     command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
@@ -57,16 +41,17 @@ services:
   api:
     image: ghcr.io/thatdavis/babything-cloud-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    networks: [frontend, backend]
     environment:
       DEPLOYMENT_MODE: cloud
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       INVITE_SECRET: ${INVITE_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      APP_URL: https://${ROOT_DOMAIN}
+      APP_URL: ${APP_URL}
       NODE_ENV: production
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      COOKIE_DOMAIN: .${ROOT_DOMAIN}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.${ROOT_DOMAIN}}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       MTLS_ENABLED: "true"
@@ -74,6 +59,7 @@ services:
       TLS_CERT_PATH: /certs/api-server.crt
       TLS_KEY_PATH: /certs/api-server.key
       TLS_CA_PATH: /certs/ca.crt
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
     volumes:
       - ./certs:/certs:ro
     depends_on:
@@ -81,36 +67,29 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${ROOT_DOMAIN}`) || Host(`${ROOT_DOMAIN}`)"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.services.api.loadbalancer.server.port=3001"
 
   web:
     image: ghcr.io/thatdavis/babything-cloud-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${ROOT_DOMAIN}`) || Host(`${ROOT_DOMAIN}`)"
-      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.services.web.loadbalancer.server.port=80"
+    networks: [frontend]
+    # The web SPA is built with VITE_API_URL=/api so all API calls are relative.
+    # The nginx reverse proxy routes /api/* to the API service.
+    depends_on:
+      - api
 
   landing:
     image: ghcr.io/thatdavis/babything-cloud-landing:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.landing.rule=Host(`${ROOT_DOMAIN}`)"
-      - "traefik.http.routers.landing.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.landing.entrypoints=websecure"
-      - "traefik.http.services.landing.loadbalancer.server.port=80"
+    networks: [frontend, backend]
+    environment:
+      PORT: 80
+    depends_on:
+      - provisioning
 
   provisioning:
     image: ghcr.io/thatdavis/babything-cloud-provisioning:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    networks: [frontend, backend]
     environment:
       PORT: 3002
       DATABASE_URL: file:/data/provisioning.db
@@ -128,17 +107,24 @@ services:
       - ./certs:/certs:ro
     depends_on:
       - api
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.provisioning.rule=Host(`${ROOT_DOMAIN}`) && PathPrefix(`/api/provisioning`)"
-      - "traefik.http.routers.provisioning.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.provisioning.entrypoints=websecure"
-      - "traefik.http.services.provisioning.loadbalancer.server.port=3002"
-      - "traefik.http.middlewares.provisioning-strip.stripprefix.prefixes=/api/provisioning"
-      - "traefik.http.routers.provisioning.middlewares=provisioning-strip"
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    networks: [frontend]
+    ports:
+      - "${PORT:-80}:80"
+      # - "${TLS_PORT:-443}:443"  # uncomment when TLS certs are configured directly
+    volumes:
+      - ./nginx/nginx.cloud.conf:/etc/nginx/nginx.conf:ro
+      # - ./certs:/etc/nginx/certs:ro  # uncomment when TLS certs are configured directly
+    depends_on:
+      - api
+      - web
+      - landing
+      - provisioning
 
 volumes:
   postgres_data:
   redis_data:
   provisioning_data:
-  letsencrypt:
