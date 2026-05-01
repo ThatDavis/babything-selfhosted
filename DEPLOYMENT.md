@@ -157,6 +157,42 @@ Backups older than 30 days are automatically deleted.
 
 ---
 
+## Build Pipeline
+
+Images are built automatically via GitHub Actions and pushed to GitHub Container Registry (GHCR). On every push to `main` or a `v*` tag, the workflow builds and tags:
+
+- `ghcr.io/thatdavis/babything-cloud-api`
+- `ghcr.io/thatdavis/babything-cloud-web`
+- `ghcr.io/thatdavis/babything-cloud-landing`
+- `ghcr.io/thatdavis/babything-cloud-provisioning`
+
+Tags applied:
+- `latest` — always points to the latest `main` branch build
+- `main` — the branch name
+- `v1.2.3` — semver for releases
+- `abc1234` — short SHA for precise pinning
+
+### Repository Variables
+
+Set these in your GitHub repo under **Settings → Secrets and variables → Actions → Variables**:
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_AFFILIATE_SCRIPT_URL` | Affiliate tracking script URL (baked into landing image) |
+| `VITE_AFFILIATE_SIGNUP_URL` | Affiliate signup page URL (baked into landing image) |
+
+### Pulling Images on a Server
+
+The cloud compose file references pre-built images by default. The server must authenticate with GHCR:
+
+```bash
+# Create a Personal Access Token (classic) with `read:packages` scope
+# Then log in on the server:
+echo $GHCR_TOKEN | docker login ghcr.io -u ThatDavis --password-stdin
+```
+
+---
+
 ## Cloud Deployment
 
 ### Prerequisites
@@ -236,10 +272,16 @@ GOOGLE_CLIENT_SECRET=...
 # VITE_AFFILIATE_SIGNUP_URL=https://example.getrewardful.com/...
 ```
 
-### Step 4: Build & Start
+### Step 4: Pull Images & Start
 
 ```bash
-docker compose -f docker-compose.cloud.yml up -d --build
+# Pull latest images and recreate containers
+docker compose -f docker-compose.cloud.yml pull
+docker compose -f docker-compose.cloud.yml up -d
+
+# Or pin to a specific release:
+# IMAGE_TAG=v1.2.3 docker compose -f docker-compose.cloud.yml pull
+# IMAGE_TAG=v1.2.3 docker compose -f docker-compose.cloud.yml up -d
 ```
 
 ### Step 5: Configure Stripe Webhook
@@ -311,6 +353,8 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 | `CAMERA_RTSP_URL` | RTSP camera URL for monitor | *(empty)* |
 | `VITE_AFFILIATE_SCRIPT_URL` | Affiliate tracking script | *(empty)* |
 | `VITE_AFFILIATE_SIGNUP_URL` | Affiliate signup page | *(empty)* |
+| `IMAGE_TAG` | Image tag to deploy (`latest`, `v1.2.3`, SHA) | `latest` |
+| `DOCKER_SOCK` | Host Docker socket path | `/var/run/docker.sock` |
 
 ### mTLS (Cloud Only, Auto-Configured)
 
