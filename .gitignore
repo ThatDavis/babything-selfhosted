@@ -6,3 +6,4 @@ platform/provisioning/.env
 *.local
 *.db
 *.db-journal
+certs/

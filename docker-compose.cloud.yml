@@ -1,5 +1,8 @@
 # Cloud deployment stack — Traefik + wildcard SSL + multi-tenant routing
 # Usage: docker compose -f docker-compose.cloud.yml up -d
+#
+# Before first start, generate mTLS certs:
+#   ./scripts/generate-mtls-certs
 
 services:
   traefik:
@@ -65,10 +68,16 @@ services:
       APP_URL: https://${ROOT_DOMAIN}
       NODE_ENV: production
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       COOKIE_DOMAIN: .${ROOT_DOMAIN}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      MTLS_ENABLED: "true"
+      MTLS_PORT: 3003
+      TLS_CERT_PATH: /certs/api-server.crt
+      TLS_KEY_PATH: /certs/api-server.key
+      TLS_CA_PATH: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,10 +127,14 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
-      MAIN_APP_URL: http://api:3001
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      MAIN_APP_URL: https://api:3003
+      MTLS_ENABLED: "true"
+      TLS_CERT_PATH: /certs/provisioning-client.crt
+      TLS_KEY_PATH: /certs/provisioning-client.key
+      TLS_CA_PATH: /certs/ca.crt
     volumes:
       - provisioning_data:/data
+      - ./certs:/certs:ro
     depends_on:
       - api
     labels:

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Generate mTLS certificates for internal service-to-service communication.
+# Run this once before starting the cloud stack:
+#   ./scripts/generate-mtls-certs
+#
+# Output: certs/
+#   ca.crt ca.key
+#   api-server.crt api-server.key
+#   provisioning-client.crt provisioning-client.key
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+CERTS_DIR="$ROOT_DIR/certs"
+DAYS=3650
+
+echo "Generating mTLS certificates in $CERTS_DIR ..."
+
+mkdir -p "$CERTS_DIR"
+cd "$CERTS_DIR"
+
+# 1. Generate CA
+if [[ ! -f ca.key ]]; then
+  openssl genrsa -out ca.key 4096
+fi
+if [[ ! -f ca.crt ]]; then
+  openssl req -x509 -new -nodes -key ca.key -sha256 -days "$DAYS" \
+    -subj "/C=US/O=Babything/CN=Babything Internal CA" \
+    -out ca.crt
+  echo "  -> ca.crt"
+fi
+
+# 2. Generate API server cert (SAN includes Docker service name + localhost)
+if [[ ! -f api-server.key ]]; then
+  openssl genrsa -out api-server.key 2048
+fi
+if [[ ! -f api-server.crt ]]; then
+  cat > api-server.cnf <<EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = api
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = api
+DNS.2 = localhost
+IP.1 = 127.0.0.1
+EOF
+
+  openssl req -new -key api-server.key -out api-server.csr -config api-server.cnf
+  openssl x509 -req -in api-server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -out api-server.crt -days "$DAYS" -sha256 -extensions v3_req -extfile api-server.cnf
+  rm -f api-server.csr api-server.cnf
+  echo "  -> api-server.crt"
+fi
+
+# 3. Generate provisioning client cert
+if [[ ! -f provisioning-client.key ]]; then
+  openssl genrsa -out provisioning-client.key 2048
+fi
+if [[ ! -f provisioning-client.crt ]]; then
+  cat > provisioning-client.cnf <<EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = provisioning
+
+[v3_req]
+keyUsage = digitalSignature
+extendedKeyUsage = clientAuth
+EOF
+
+  openssl req -new -key provisioning-client.key -out provisioning-client.csr -config provisioning-client.cnf
+  openssl x509 -req -in provisioning-client.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+    -out provisioning-client.crt -days "$DAYS" -sha256 -extensions v3_req -extfile provisioning-client.cnf
+  rm -f provisioning-client.csr provisioning-client.cnf
+  echo "  -> provisioning-client.crt"
+fi
+
+# 4. Set restrictive permissions
+chmod 600 *.key
+chmod 644 *.crt
+
+echo "Done."
+echo ""
+echo "Mount the certs directory into your services:"
+echo "  api:         $CERTS_DIR -> /certs"
+echo "  provisioning: $CERTS_DIR -> /certs"

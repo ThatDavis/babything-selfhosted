@@ -1,4 +1,6 @@
 import http from 'http'
+import https from 'https'
+import fs from 'fs'
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
@@ -98,3 +100,23 @@ app.use('/internal', internalRouter)
 
 const port = Number(process.env.PORT ?? 3001)
 httpServer.listen(port, () => console.log(`api listening on :${port}`))
+
+// Optional mTLS server for internal service-to-service communication
+const mtlsEnabled = process.env.MTLS_ENABLED === 'true'
+if (mtlsEnabled) {
+  const mtlsPort = Number(process.env.MTLS_PORT ?? 3003)
+  const certPath = process.env.TLS_CERT_PATH ?? '/certs/api-server.crt'
+  const keyPath = process.env.TLS_KEY_PATH ?? '/certs/api-server.key'
+  const caPath = process.env.TLS_CA_PATH ?? '/certs/ca.crt'
+
+  const tlsOptions: https.ServerOptions = {
+    cert: fs.readFileSync(certPath),
+    key: fs.readFileSync(keyPath),
+    ca: fs.readFileSync(caPath),
+    requestCert: true,
+    rejectUnauthorized: true,
+  }
+
+  const mtlsServer = https.createServer(tlsOptions, app)
+  mtlsServer.listen(mtlsPort, () => console.log(`api mTLS listening on :${mtlsPort}`))
+}

@@ -1,5 +1,73 @@
+import https from 'https'
+import fs from 'fs'
+
 const MAIN_APP_URL = process.env.MAIN_APP_URL ?? 'http://localhost:3001'
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY!
+const mtlsEnabled = process.env.MTLS_ENABLED === 'true'
+
+const tlsCert = mtlsEnabled
+  ? fs.readFileSync(process.env.TLS_CERT_PATH ?? '/certs/provisioning-client.crt')
+  : undefined
+const tlsKey = mtlsEnabled
+  ? fs.readFileSync(process.env.TLS_KEY_PATH ?? '/certs/provisioning-client.key')
+  : undefined
+const tlsCa = mtlsEnabled
+  ? fs.readFileSync(process.env.TLS_CA_PATH ?? '/certs/ca.crt')
+  : undefined
+
+interface FetchResponse {
+  ok: boolean
+  status: number
+  json(): Promise<any>
+  text(): Promise<string>
+}
+
+function mtlsFetch(
+  url: string,
+  options: { method: string; headers?: Record<string, string>; body?: string }
+): Promise<FetchResponse> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url)
+    const req = https.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path: parsed.pathname + parsed.search,
+        method: options.method,
+        headers: options.headers,
+        cert: tlsCert,
+        key: tlsKey,
+        ca: tlsCa,
+        rejectUnauthorized: true,
+      },
+      (res) => {
+        let data = ''
+        res.setEncoding('utf8')
+        res.on('data', (chunk) => (data += chunk))
+        res.on('end', () => {
+          resolve({
+            ok: res.statusCode! >= 200 && res.statusCode! < 300,
+            status: res.statusCode!,
+            json: () => Promise.resolve(JSON.parse(data)),
+            text: () => Promise.resolve(data),
+          })
+        })
+      }
+    )
+    req.on('error', reject)
+    if (options.body) req.write(options.body)
+    req.end()
+  })
+}
+
+function internalFetch(
+  url: string,
+  options: { method: string; headers?: Record<string, string>; body?: string }
+): Promise<FetchResponse> {
+  if (!mtlsEnabled) {
+    return fetch(url, options as any) as Promise<FetchResponse>
+  }
+  return mtlsFetch(url, options)
+}
 
 export async function pushTenantToMainApp(tenant: {
   subdomain: string
@@ -7,11 +75,10 @@ export async function pushTenantToMainApp(tenant: {
   trialEndsAt?: Date | null
   plan: string
 }) {
-  const res = await fetch(`${MAIN_APP_URL}/internal/tenants`, {
+  const res = await internalFetch(`${MAIN_APP_URL}/internal/tenants`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Key': INTERNAL_API_KEY,
     },
     body: JSON.stringify(tenant),
   })
@@ -26,11 +93,10 @@ export async function updateTenantInMainApp(
   subdomain: string,
   data: Partial<{ status: string; trialEndsAt: Date | null; plan: string }>
 ) {
-  const res = await fetch(`${MAIN_APP_URL}/internal/tenants/${subdomain}`, {
+  const res = await internalFetch(`${MAIN_APP_URL}/internal/tenants/${subdomain}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Key': INTERNAL_API_KEY,
     },
     body: JSON.stringify(data),
   })
@@ -42,9 +108,8 @@ export async function updateTenantInMainApp(
 }
 
 export async function deleteTenantInMainApp(subdomain: string) {
-  const res = await fetch(`${MAIN_APP_URL}/internal/tenants/${subdomain}`, {
+  const res = await internalFetch(`${MAIN_APP_URL}/internal/tenants/${subdomain}`, {
     method: 'DELETE',
-    headers: { 'X-Internal-Key': INTERNAL_API_KEY },
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string }

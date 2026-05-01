@@ -10,12 +10,11 @@
 
 ## Current Status
 
-**Self-hosted Phase 3 — Nearly Complete**
+**Phase 5 — Growth & Hardening (In Progress)**
 
-All core polish features are done. One item remains (dedicated Google OAuth strategy)
-before moving to the cloud migration.
+Building advanced features and hardening the platform.
 
-**Next major phase:** Cloud Infrastructure (multi-tenant SaaS)
+**Current feature:** mTLS between services
 
 ---
 
@@ -95,7 +94,7 @@ before moving to the cloud migration.
 
 ## Phase 5 — Growth & Hardening (Planned)
 
-- [ ] Replace shared API key with mTLS between services
+- [x] Replace shared API key with mTLS between services
 - [ ] Annual plan promotion
 - [ ] Referral program
 - [ ] Affiliate program
@@ -111,8 +110,8 @@ before moving to the cloud migration.
 | Phase 1 — Core MVP | ✅ Complete | 8/8 | 0 |
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
-| Phase 4 — Cloud | 🔵 Not started | 0/13 | 13 |
-| Phase 5 — Growth | ⚪ Planned | 0/6 | 6 |
+| Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
+| Phase 5 — Growth | 🔵 In Progress | 0/6 | 6 |
 
 ---
 
