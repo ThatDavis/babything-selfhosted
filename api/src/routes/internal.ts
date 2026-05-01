@@ -12,6 +12,7 @@ const createTenantSchema = z.object({
   trialEndsAt: z.string().datetime().optional().nullable(),
   plan: z.string().default('FLAT_RATE'),
   billingPeriod: z.enum(['MONTHLY', 'ANNUAL']).default('MONTHLY'),
+  referralCode: z.string().optional(),
 })
 
 router.post('/tenants', requireInternalKey, async (req, res) => {
@@ -36,6 +37,7 @@ router.post('/tenants', requireInternalKey, async (req, res) => {
       trialEndsAt: result.data.trialEndsAt ? new Date(result.data.trialEndsAt) : null,
       plan: result.data.plan,
       billingPeriod: result.data.billingPeriod,
+      referralCode: result.data.referralCode,
     },
   })
 
@@ -55,6 +57,7 @@ const patchTenantSchema = z.object({
   trialEndsAt: z.string().datetime().optional().nullable(),
   plan: z.string().optional(),
   billingPeriod: z.enum(['MONTHLY', 'ANNUAL']).optional(),
+  referralCode: z.string().optional(),
 })
 
 router.patch('/tenants/:subdomain', requireInternalKey, async (req, res) => {
@@ -71,6 +74,7 @@ router.patch('/tenants/:subdomain', requireInternalKey, async (req, res) => {
   }
   if (result.data.plan !== undefined) data.plan = result.data.plan
   if (result.data.billingPeriod !== undefined) data.billingPeriod = result.data.billingPeriod
+  if (result.data.referralCode !== undefined) data.referralCode = result.data.referralCode
 
   const tenant = await prisma.tenant.update({
     where: { subdomain: req.params.subdomain },

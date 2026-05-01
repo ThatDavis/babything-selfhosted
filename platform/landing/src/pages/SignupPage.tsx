@@ -11,17 +11,32 @@ export default function SignupPage() {
   const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'ANNUAL'>(
     params.get('period') === 'annual' ? 'ANNUAL' : 'MONTHLY'
   )
+  const [referralCode, setReferralCode] = useState(params.get('ref') ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<{ subdomain: string; trialEndsAt: string } | null>(null)
+  const [result, setResult] = useState<{
+    subdomain: string
+    trialEndsAt: string
+    referralReward: { referrerSubdomain: string; referrerTrialExtended: boolean } | null
+  } | null>(null)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
     try {
-      const res = await api.provision({ email, name, subdomain, billingPeriod })
-      setResult({ subdomain: res.tenant.subdomain, trialEndsAt: res.trialEndsAt })
+      const res = await api.provision({
+        email,
+        name,
+        subdomain,
+        billingPeriod,
+        referralCode: referralCode || undefined,
+      })
+      setResult({
+        subdomain: res.tenant.subdomain,
+        trialEndsAt: res.trialEndsAt,
+        referralReward: res.referralReward,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed')
     } finally {
@@ -38,8 +53,13 @@ export default function SignupPage() {
             Your family subdomain is <strong className="text-brand-600">{result.subdomain}.babything.app</strong>
           </p>
           <p className="text-sm text-stone-500">
-            Your 14-day free trial ends on {new Date(result.trialEndsAt).toLocaleDateString()}.
+            Your {result.referralReward ? '21-day' : '14-day'} free trial ends on {new Date(result.trialEndsAt).toLocaleDateString()}.
           </p>
+          {result.referralReward && (
+            <p className="text-sm text-green-600 font-medium">
+              🎉 You and {result.referralReward.referrerSubdomain} both got an extra week!
+            </p>
+          )}
           <a href={`https://${result.subdomain}.babything.app`} className="btn-primary w-full inline-block">
             Go to your subdomain
           </a>
@@ -101,6 +121,16 @@ export default function SignupPage() {
             />
             <span className="px-4 py-3 bg-stone-100 border border-l-0 border-stone-200 rounded-r-xl text-sm text-stone-500">.babything.app</span>
           </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Referral code <span className="text-stone-400 font-normal">(optional)</span></label>
+          <input
+            type="text"
+            className="input"
+            value={referralCode}
+            onChange={e => setReferralCode(e.target.value.toLowerCase().trim())}
+            placeholder="smith-a3f7b2"
+          />
         </div>
         <button type="submit" disabled={loading} className="btn-primary w-full">
           {loading ? 'Creating…' : `Create my subdomain`}

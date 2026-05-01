@@ -15,6 +15,7 @@ model Tenant {
   trialEndsAt   DateTime?
   plan          String   @default("FLAT_RATE")
   billingPeriod String   @default("MONTHLY") // MONTHLY | ANNUAL
+  referralCode  String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -332,6 +333,19 @@ model SmtpConfig {
   enabled   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Referral {
+  id                String    @id @default(cuid())
+  referrerSubdomain String
+  refereeSubdomain  String    @unique
+  code              String
+  status            String    @default("PENDING") // PENDING | REWARDED
+  createdAt         DateTime  @default(now())
+  rewardAppliedAt   DateTime?
+
+  @@index([referrerSubdomain])
+  @@index([code])
 }
 
 model SystemSettings {
