@@ -97,7 +97,7 @@ Building advanced features and hardening the platform.
 - [x] Replace shared API key with mTLS between services
 - [x] Annual plan promotion
 - [x] Referral program
-- [ ] Affiliate program
+- [x] Affiliate program
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 

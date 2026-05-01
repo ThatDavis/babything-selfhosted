@@ -108,6 +108,10 @@ services:
     build:
       context: ./platform/landing
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_AFFILIATE_SCRIPT_URL: ${VITE_AFFILIATE_SCRIPT_URL}
+        VITE_AFFILIATE_SIGNUP_URL: ${VITE_AFFILIATE_SIGNUP_URL}
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
