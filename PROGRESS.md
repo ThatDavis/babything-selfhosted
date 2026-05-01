@@ -98,6 +98,14 @@ Building advanced features and hardening the platform.
 - [x] Annual plan promotion
 - [x] Referral program
 - [x] Affiliate program
+- [x] Replace Traefik with external reverse proxy support
+  - [x] Remove Traefik from docker-compose.cloud.yml
+  - [x] Add explicit Docker networks (frontend/backend)
+  - [x] Create cloud nginx config with subdomain + path routing
+  - [x] Fix api/web routing conflict (path-prefix API routes)
+  - [x] Update .env.example (remove ACME/Traefik vars, add proxy vars)
+  - [x] Update DEPLOYMENT.md with new cloud deploy instructions
+  - [x] Update REQUIREMENTS.md tech stack
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 

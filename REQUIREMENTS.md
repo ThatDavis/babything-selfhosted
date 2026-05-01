@@ -137,7 +137,7 @@ VaccineRecord   — id, babyId, tenantId, vaccineName, doseNumber, lotNumber, ad
 | Real-time | Socket.io |
 | Containerization | Docker + Docker Compose |
 | Reverse proxy (self-hosted) | Nginx |
-| Reverse proxy (cloud) | Traefik (wildcard SSL) |
+| Reverse proxy (cloud) | Nginx (behind external TLS proxy) |
 | Cache | Redis |
 | Billing | Stripe |
 | Email (cloud) | Resend / Postmark |

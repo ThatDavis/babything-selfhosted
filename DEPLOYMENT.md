@@ -33,11 +33,11 @@ Babything is a full-stack baby tracking application with two deployment modes:
 - **Best for:** Families who want to self-host on their own hardware
 
 ### Cloud (Multi-Tenant SaaS)
-- **Stack:** Docker Compose with 7 services (no MediaMTX, no nginx)
-- **Entrypoint:** Traefik reverse proxy with Let's Encrypt SSL on ports 80/443
+- **Stack:** Docker Compose with 7 services (no MediaMTX)
+- **Entrypoint:** nginx reverse proxy on port 80 (place behind an external proxy for TLS)
 - **Database:** PostgreSQL 16 + SQLite (provisioning)
 - **Cache:** Redis 7
-- **SSL:** Automatic wildcard certificates via ACME TLS challenge
+- **SSL:** Terminated by external reverse proxy (nginx, Caddy, cloud LB, etc.)
 - **Best for:** Running babything.app as a subscription SaaS
 
 ### Service Map
@@ -58,6 +58,10 @@ api:3001 ──▶ redis:6379
 landing:80 ──▶ provisioning:3002
 provisioning:3002 ──▶ api:3001  (internal API, mTLS in cloud)
 ```
+
+Both self-hosted and cloud stacks use the same nginx-based entrypoint. The
+difference is that cloud mode adds subdomain routing (`*.example.com` → tenant
+SPA) and runs behind an external TLS-terminating proxy.
 
 ---
 
@@ -201,6 +205,7 @@ echo $GHCR_TOKEN | docker login ghcr.io -u ThatDavis --password-stdin
 - A domain name with DNS pointed to your server
 - Docker & Docker Compose
 - Stripe account with Products & Prices configured
+- An external reverse proxy that terminates TLS (nginx, Caddy, Cloudflare, etc.)
 
 ### Step 1: DNS Setup
 
@@ -209,7 +214,6 @@ Create these DNS A records pointing to your server IP:
 ```
 example.com          A  <server-ip>
 *.example.com        A  <server-ip>
-operator.example.com A  <server-ip>
 ```
 
 The wildcard (`*`) is required for tenant subdomains.
@@ -253,15 +257,17 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ID=price_...        # Monthly plan
 STRIPE_ANNUAL_PRICE_ID=price_... # Annual plan
 
-# Domain & SSL
+# Domain
 ROOT_DOMAIN=example.com
-ACME_EMAIL=admin@example.com
 
-# App URL
+# App URL (must match the public HTTPS URL)
 APP_URL=https://example.com
 
 # Deployment mode
 DEPLOYMENT_MODE=cloud
+
+# Trust the external reverse proxy so the API sees real client IPs
+TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
 
 # Google OAuth (recommended for cloud)
 GOOGLE_CLIENT_ID=...
@@ -272,7 +278,52 @@ GOOGLE_CLIENT_SECRET=...
 # VITE_AFFILIATE_SIGNUP_URL=https://example.getrewardful.com/...
 ```
 
-### Step 4: Pull Images & Start
+### Step 4: Configure External Reverse Proxy
+
+The cloud stack includes an nginx service that handles subdomain routing and
+path-based proxies. Point your external TLS-terminating proxy to it.
+
+**Example upstream routes (nginx):**
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name example.com *.example.com;
+
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+
+    location / {
+        proxy_pass         http://127.0.0.1:80;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection "upgrade";
+    }
+}
+```
+
+**Example upstream routes (Caddy):**
+
+```
+example.com, *.example.com {
+    reverse_proxy localhost:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+```
+
+> The internal nginx container listens on port 80 by default. If you need to
+> change the host port, set `PORT` in `.env` (e.g., `PORT=8080`).
+
+### Step 5: Pull Images & Start
 
 ```bash
 # Pull latest images and recreate containers
@@ -284,7 +335,7 @@ docker compose -f docker-compose.cloud.yml up -d
 # IMAGE_TAG=v1.2.3 docker compose -f docker-compose.cloud.yml up -d
 ```
 
-### Step 5: Configure Stripe Webhook
+### Step 6: Configure Stripe Webhook
 
 In your Stripe Dashboard, create a webhook endpoint:
 
@@ -300,11 +351,11 @@ Events:
 
 Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart.
 
-### Step 6: Verify
+### Step 7: Verify
 
 - Landing page: `https://example.com`
-- Operator dashboard: `https://operator.example.com`
 - Tenant subdomain: `https://smith.example.com`
+- API health: `https://example.com/api/health`
 
 ### Cloud-Specific Notes
 
@@ -312,6 +363,7 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 - **Tenant Isolation:** Each tenant's data is isolated via PostgreSQL RLS policies and `tenantId` filtering in all queries.
 - **No Monitor:** The cloud stack does not include MediaMTX. Monitor v2 (WebRTC) is planned for a future release.
 - **No SMTP:** Email is platform-managed in cloud mode. Per-tenant SMTP configuration is hidden.
+- **No Operator Dashboard:** The previous Traefik dashboard at `operator.{ROOT_DOMAIN}` has been removed. Operator features are available via the API (`/admin/tenants`).
 
 ---
 
@@ -338,8 +390,7 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook verification | `whsec_...` |
 | `STRIPE_PRICE_ID` | Monthly plan price ID | `price_...` |
 | `STRIPE_ANNUAL_PRICE_ID` | Annual plan price ID | `price_...` |
-| `ROOT_DOMAIN` | Root domain for Traefik | `babything.app` |
-| `ACME_EMAIL` | Let's Encrypt contact email | `admin@babything.app` |
+| `ROOT_DOMAIN` | Root domain for subdomain routing | `babything.app` |
 
 ### Optional
 
@@ -349,12 +400,12 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 | `GOOGLE_CLIENT_ID` | Google OAuth app ID | *(empty)* |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth app secret | *(empty)* |
 | `INTERNAL_API_KEY` | Shared secret for service-to-service calls | *(empty)* |
-| `TRUSTED_PROXIES` | Comma-separated proxy IPs | *(empty)* |
+| `TRUSTED_PROXIES` | Comma-separated proxy IPs or CIDR ranges | *(empty)* |
+| `COOKIE_DOMAIN` | Cookie scope (defaults to `.ROOT_DOMAIN`) | *(auto)* |
 | `CAMERA_RTSP_URL` | RTSP camera URL for monitor | *(empty)* |
 | `VITE_AFFILIATE_SCRIPT_URL` | Affiliate tracking script | *(empty)* |
 | `VITE_AFFILIATE_SIGNUP_URL` | Affiliate signup page | *(empty)* |
 | `IMAGE_TAG` | Image tag to deploy (`latest`, `v1.2.3`, SHA) | `latest` |
-| `DOCKER_SOCK` | Host Docker socket path | `/var/run/docker.sock` |
 
 ### mTLS (Cloud Only, Auto-Configured)
 
@@ -503,78 +554,19 @@ Accessible at `/admin` by users with `isAdmin = true`.
 
 - [ ] `.env` secrets are strong and unique
 - [ ] DNS A and wildcard records propagated
+- [ ] External reverse proxy configured and forwarding to the stack
+- [ ] `TRUSTED_PROXIES` set to the external proxy's IP(s)
 - [ ] mTLS certificates generated (`./scripts/generate-mtls-certs`)
 - [ ] Stripe webhook endpoint configured and verified
 - [ ] Stripe prices created (monthly + annual)
 - [ ] Google OAuth configured (recommended)
-- [ ] Let's Encrypt certificates issued successfully
 - [ ] Test signup flow end-to-end
 - [ ] Test referral code flow
 - [ ] Backup script scheduled via cron
-- [ ] Operator dashboard accessible at `operator.{ROOT_DOMAIN}`
 
 ---
 
 ## Known Issues & Fixes
-
-### Cloud Routing Conflict
-
-**Issue:** The `api` and `web` Traefik routers in `docker-compose.cloud.yml` share identical `HostRegexp` rules. This causes unpredictable routing.
-
-**Fix:** Add path-based differentiation. Update the `api` router to include a `PathPrefix` condition, or use Traefik priorities:
-
-```yaml
-# Option A: Add /api prefix to API routes and route accordingly
-labels:
-  - "traefik.http.routers.api.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${ROOT_DOMAIN}`) || Host(`${ROOT_DOMAIN}`) && PathPrefix(`/api`)"
-  - "traefik.http.routers.web.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${ROOT_DOMAIN}`) || Host(`${ROOT_DOMAIN}`)"
-```
-
-> **Note:** This requires the web SPA to proxy `/api` requests to the API service, or the API to be accessible under `/api`. The self-hosted nginx config already handles this pattern.
-
-### Missing Traefik Auth Middleware
-
-**Issue:** The `auth@file` middleware referenced by the Traefik dashboard router does not exist in the repository.
-
-**Fix:** Either:
-1. Mount a Traefik dynamic config file with a basic auth middleware.
-2. Remove the middleware reference to expose the dashboard (not recommended for production).
-
-Example dynamic config (`traefik/dynamic.yml`):
-```yaml
-http:
-  middlewares:
-    auth:
-      basicAuth:
-        users:
-          - "admin:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
-```
-
-Then mount it in `docker-compose.cloud.yml`:
-```yaml
-traefik:
-  volumes:
-    - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-```
-
-### No Custom Networks
-
-**Issue:** All services share the default bridge network.
-
-**Fix:** Define explicit networks for better isolation:
-```yaml
-networks:
-  frontend:
-  backend:
-
-services:
-  api:
-    networks: [backend, frontend]
-  web:
-    networks: [frontend]
-  postgres:
-    networks: [backend]
-```
 
 ### Monitor Not Available in Cloud
 
