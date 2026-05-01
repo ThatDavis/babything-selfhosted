@@ -95,7 +95,7 @@ Building advanced features and hardening the platform.
 ## Phase 5 — Growth & Hardening (Planned)
 
 - [x] Replace shared API key with mTLS between services
-- [ ] Annual plan promotion
+- [x] Annual plan promotion
 - [ ] Referral program
 - [ ] Affiliate program
 - [ ] Monitor v2 for cloud (WebRTC)

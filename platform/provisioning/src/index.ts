@@ -1,6 +1,7 @@
 import express from 'express'
 import tenantsRouter from './routes/tenants.js'
 import webhooksRouter from './routes/webhooks.js'
+import billingRouter from './routes/billing.js'
 
 const app = express()
 
@@ -11,6 +12,7 @@ app.use('/webhooks/stripe', express.raw({ type: 'application/json' }), webhooksR
 app.use(express.json({ limit: '100kb' }))
 
 app.use('/tenants', tenantsRouter)
+app.use('/billing', billingRouter)
 
 app.get('/health', (_req, res) => res.json({ ok: true }))
 

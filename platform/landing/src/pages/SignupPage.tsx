@@ -1,12 +1,16 @@
 import { useState, FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 
 export default function SignupPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [subdomain, setSubdomain] = useState('')
+  const [billingPeriod, setBillingPeriod] = useState<'MONTHLY' | 'ANNUAL'>(
+    params.get('period') === 'annual' ? 'ANNUAL' : 'MONTHLY'
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<{ subdomain: string; trialEndsAt: string } | null>(null)
@@ -16,7 +20,7 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await api.provision({ email, name, subdomain })
+      const res = await api.provision({ email, name, subdomain, billingPeriod })
       setResult({ subdomain: res.tenant.subdomain, trialEndsAt: res.trialEndsAt })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed')
@@ -50,6 +54,31 @@ export default function SignupPage() {
         <h2 className="text-2xl font-bold text-stone-800">Start your free trial</h2>
         <p className="text-sm text-stone-500">No credit card required. 14 days free.</p>
         {error && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+        <div className="flex items-center justify-center gap-3 py-2">
+          <span className={`text-sm font-medium ${billingPeriod === 'MONTHLY' ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
+          <button
+            type="button"
+            onClick={() => setBillingPeriod(p => p === 'MONTHLY' ? 'ANNUAL' : 'MONTHLY')}
+            className="relative w-12 h-6 rounded-full bg-brand-200 transition-colors"
+            aria-label="Toggle annual billing"
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-brand-600 transition-transform ${billingPeriod === 'ANNUAL' ? 'translate-x-6' : ''}`}
+            />
+          </button>
+          <span className={`text-sm font-medium ${billingPeriod === 'ANNUAL' ? 'text-stone-800' : 'text-stone-400'}`}>Annual</span>
+        </div>
+
+        <div className="text-center">
+          <p className="text-2xl font-bold text-brand-600">
+            {billingPeriod === 'ANNUAL' ? '$77/yr' : '$8/mo'}
+          </p>
+          {billingPeriod === 'ANNUAL' && (
+            <p className="text-xs text-green-600 font-medium">~20% savings</p>
+          )}
+        </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>
           <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} required />
@@ -74,7 +103,7 @@ export default function SignupPage() {
           </div>
         </div>
         <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? 'Creating…' : 'Create my subdomain'}
+          {loading ? 'Creating…' : `Create my subdomain`}
         </button>
         <button type="button" onClick={() => navigate('/')} className="btn-ghost w-full text-sm">
           ← Back

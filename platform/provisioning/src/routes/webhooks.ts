@@ -101,11 +101,23 @@ router.post('/stripe', async (req: Request, res: Response) => {
           : subscription.status === 'past_due' ? 'PAST_DUE'
           : tenant.status
 
-        if (status !== tenant.status) {
+        const item = subscription.items.data[0]
+        const priceId = item?.price?.id
+        const newBillingPeriod = priceId === process.env.STRIPE_ANNUAL_PRICE_ID ? 'ANNUAL'
+          : priceId === process.env.STRIPE_PRICE_ID ? 'MONTHLY'
+          : tenant.billingPeriod
+
+        const needsUpdate = status !== tenant.status
+          || newBillingPeriod !== tenant.billingPeriod
+          || subscription.current_period_start
+          || subscription.current_period_end
+
+        if (needsUpdate) {
           await prisma.tenantSubscription.update({
             where: { id: tenant.id },
             data: {
               status,
+              billingPeriod: newBillingPeriod,
               currentPeriodStart: subscription.current_period_start
                 ? new Date(subscription.current_period_start * 1000)
                 : tenant.currentPeriodStart,
@@ -114,7 +126,12 @@ router.post('/stripe', async (req: Request, res: Response) => {
                 : tenant.currentPeriodEnd,
             },
           })
-          await updateTenantInMainApp(tenant.subdomain, { status }).catch(() => {})
+          const updates: Record<string, unknown> = {}
+          if (status !== tenant.status) updates.status = status
+          if (newBillingPeriod !== tenant.billingPeriod) updates.billingPeriod = newBillingPeriod
+          if (Object.keys(updates).length > 0) {
+            await updateTenantInMainApp(tenant.subdomain, updates).catch(() => {})
+          }
         }
       }
       break

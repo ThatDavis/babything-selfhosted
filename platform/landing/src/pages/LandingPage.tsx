@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const [annual, setAnnual] = useState(false)
 
   return (
     <div className="min-h-screen">
@@ -43,8 +45,32 @@ export default function LandingPage() {
         <section className="text-center space-y-6">
           <h2 className="text-3xl font-bold text-stone-800">Simple pricing</h2>
           <div className="card max-w-sm mx-auto">
-            <p className="text-4xl font-bold text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
-            <p className="text-sm text-stone-500 mt-1">or $77/yr (~20% savings)</p>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <span className={`text-sm font-medium ${!annual ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
+              <button
+                onClick={() => setAnnual(!annual)}
+                className="relative w-12 h-6 rounded-full bg-brand-200 transition-colors"
+                aria-label="Toggle annual billing"
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-brand-600 transition-transform ${annual ? 'translate-x-6' : ''}`}
+                />
+              </button>
+              <span className={`text-sm font-medium ${annual ? 'text-stone-800' : 'text-stone-400'}`}>Annual</span>
+            </div>
+
+            {annual ? (
+              <>
+                <p className="text-4xl font-bold text-brand-600">$77<span className="text-lg text-stone-500 font-normal">/yr</span></p>
+                <p className="text-sm text-green-600 mt-1 font-medium">~20% savings vs monthly</p>
+              </>
+            ) : (
+              <>
+                <p className="text-4xl font-bold text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
+                <p className="text-sm text-stone-500 mt-1">or $77/yr (~20% savings)</p>
+              </>
+            )}
+
             <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
               <li>✓ Unlimited babies & caregivers</li>
               <li>✓ All tracking features</li>
@@ -52,7 +78,9 @@ export default function LandingPage() {
               <li>✓ Platform-managed email & sign-in</li>
               <li>✓ Private subdomain</li>
             </ul>
-            <button onClick={() => navigate('/signup')} className="btn-primary w-full mt-6">Start free trial</button>
+            <button onClick={() => navigate(`/signup?period=${annual ? 'annual' : 'monthly'}`)} className="btn-primary w-full mt-6">
+              Start free trial
+            </button>
           </div>
         </section>
       </main>

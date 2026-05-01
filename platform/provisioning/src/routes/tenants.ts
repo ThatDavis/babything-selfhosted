@@ -10,7 +10,19 @@ const createSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   subdomain: z.string().min(3).regex(/^[a-z0-9-]+$/),
+  billingPeriod: z.enum(['MONTHLY', 'ANNUAL']).default('MONTHLY'),
 })
+
+function getStripePriceId(billingPeriod: string): string {
+  if (billingPeriod === 'ANNUAL') {
+    const id = process.env.STRIPE_ANNUAL_PRICE_ID
+    if (!id) throw new Error('STRIPE_ANNUAL_PRICE_ID not configured')
+    return id
+  }
+  const id = process.env.STRIPE_PRICE_ID
+  if (!id) throw new Error('STRIPE_PRICE_ID not configured')
+  return id
+}
 
 router.post('/', async (req, res) => {
   const result = createSchema.safeParse(req.body)
@@ -19,7 +31,7 @@ router.post('/', async (req, res) => {
     return
   }
 
-  const { email, name, subdomain } = result.data
+  const { email, name, subdomain, billingPeriod } = result.data
 
   const existing = await prisma.tenantSubscription.findUnique({
     where: { subdomain },
@@ -48,7 +60,7 @@ router.post('/', async (req, res) => {
       trial_end: Math.floor(trialEndsAt.getTime() / 1000),
       items: [
         {
-          price: process.env.STRIPE_PRICE_ID!,
+          price: getStripePriceId(billingPeriod),
         },
       ],
       metadata: { subdomain },
@@ -77,6 +89,7 @@ router.post('/', async (req, res) => {
       stripeSubscriptionId,
       currentPeriodStart: new Date(),
       currentPeriodEnd: trialEndsAt,
+      billingPeriod,
     },
   })
 
@@ -86,6 +99,7 @@ router.post('/', async (req, res) => {
       status: 'TRIAL',
       trialEndsAt,
       plan: 'FLAT_RATE',
+      billingPeriod,
     })
   } catch (err) {
     console.error('Failed to push tenant to main app:', err)

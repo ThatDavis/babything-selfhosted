@@ -7,3 +7,4 @@ platform/provisioning/.env
 *.db
 *.db-journal
 certs/
+platform/landing/src/**/*.js

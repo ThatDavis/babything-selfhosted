@@ -74,6 +74,7 @@ export async function pushTenantToMainApp(tenant: {
   status: string
   trialEndsAt?: Date | null
   plan: string
+  billingPeriod?: string
 }) {
   const res = await internalFetch(`${MAIN_APP_URL}/internal/tenants`, {
     method: 'POST',
