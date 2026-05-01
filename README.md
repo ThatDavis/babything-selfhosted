@@ -1,6 +1,10 @@
 # babything
 
-A self-hosted newborn tracking app for families and caregivers. Log feedings, diapers, sleep, growth, medications, vaccines, and milestones. Share access with partners, grandparents, or anyone helping care for the baby. Runs entirely on your own hardware with Docker.
+A newborn tracking app for families and caregivers. Log feedings, diapers, sleep, growth, medications, vaccines, and milestones. Share access with partners, grandparents, or anyone helping care for the baby.
+
+**Two deployment modes:**
+- **Self-hosted** — Run on your own hardware with Docker (single family)
+- **Cloud / SaaS** — Multi-tenant subscription hosting with Stripe billing, custom subdomains, and automated SSL
 
 ---
 
@@ -164,14 +168,27 @@ If you're putting babything behind an existing nginx, Caddy, or Traefik instance
 
 ---
 
+## Cloud / SaaS
+
+Babything also runs as a multi-tenant SaaS with:
+- Custom subdomains (`yourfamily.babything.app`)
+- Stripe subscription billing (monthly & annual plans)
+- Automated SSL via Let's Encrypt
+- Referral program ("give a week, get a week")
+- Affiliate program integration
+
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for full cloud deployment instructions.
+
+---
+
 ## Tech stack
 
 | Layer | What |
 |-------|------|
 | API | Node.js, Express, TypeScript, Prisma |
-| Database | PostgreSQL |
+| Database | PostgreSQL (app), SQLite (provisioning) |
 | Frontend | React, Vite, Tailwind CSS |
 | Real-time | Socket.io |
 | Media | mediamtx (RTSP → HLS) |
-| Reverse proxy | Nginx |
+| Reverse proxy | Nginx (self-hosted), Traefik (cloud) |
 | Deployment | Docker Compose |
