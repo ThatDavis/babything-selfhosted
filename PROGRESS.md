@@ -140,6 +140,9 @@ Building advanced features and hardening the platform.
   - [x] Mailer uses Resend API when `RESEND_API_KEY` is set
   - [x] Falls back to SMTP config for self-hosted mode
   - [x] `FROM_EMAIL` and `FROM_NAME` env vars for sender identity
+- [x] Email template test send
+  - [x] API endpoint: `POST /operator/dashboard/email-templates/:name/test`
+  - [x] Operator dashboard: test email input + send button in Templates tab
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
@@ -153,7 +156,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 12/14 | 2 |
+| Phase 5 — Growth | 🔵 In Progress | 13/15 | 2 |
 
 ---
 
