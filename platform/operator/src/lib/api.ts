@@ -68,6 +68,21 @@ export interface EmailTemplate {
   updatedAt: string
 }
 
+export interface Plan {
+  id: string
+  name: string
+  description: string | null
+  monthlyPrice: number
+  annualPrice: number
+  stripeMonthlyPriceId: string | null
+  stripeAnnualPriceId: string | null
+  features: string[]
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -154,4 +169,12 @@ export const api = {
     request<{ ok: boolean }>(`/operator/dashboard/email-templates/${name}/test`, { method: 'POST', body: JSON.stringify({ to }) }),
   seedEmailTemplates: () =>
     request<{ ok: boolean }>('/operator/dashboard/email-templates/seed', { method: 'POST' }),
+
+  getPlans: () => request<{ plans: Plan[] }>('/operator/dashboard/plans'),
+  createPlan: (body: { name: string; description?: string; monthlyPrice: number; annualPrice: number; stripeMonthlyPriceId?: string; stripeAnnualPriceId?: string; features?: string[]; isActive?: boolean; sortOrder?: number }) =>
+    request<{ plan: Plan }>('/operator/dashboard/plans', { method: 'POST', body: JSON.stringify(body) }),
+  updatePlan: (id: string, body: Partial<{ name: string; description?: string; monthlyPrice: number; annualPrice: number; stripeMonthlyPriceId?: string; stripeAnnualPriceId?: string; features?: string[]; isActive?: boolean; sortOrder?: number }>) =>
+    request<{ plan: Plan }>(`/operator/dashboard/plans/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deletePlan: (id: string) =>
+    request<{ ok: boolean }>(`/operator/dashboard/plans/${id}`, { method: 'DELETE' }),
 }

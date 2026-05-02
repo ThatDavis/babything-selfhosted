@@ -192,4 +192,24 @@ router.post('/discount-codes/use', requireInternalKey, async (req, res) => {
   res.json({ ok: true })
 })
 
+// ── Plans (called by provisioning service) ───────────────────
+router.get('/plans', requireInternalKey, async (_req, res) => {
+  const plans = await prisma.plan.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: 'asc' },
+  })
+  res.json({ plans })
+})
+
+router.get('/plans/:name', requireInternalKey, async (req, res) => {
+  const plan = await prisma.plan.findUnique({
+    where: { name: req.params.name },
+  })
+  if (!plan) {
+    res.status(404).json({ error: 'Plan not found' })
+    return
+  }
+  res.json(plan)
+})
+
 export default router

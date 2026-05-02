@@ -147,6 +147,12 @@ Building advanced features and hardening the platform.
   - [x] Landing page: serif fonts, emojis, sage palette
   - [x] Web app: sage brand palette, serif headings
   - [x] Update chart colors to match new palette
+- [x] Operator pricing control
+  - [x] `Plan` model: name, description, monthly/annual prices, Stripe price IDs, features, active flag
+  - [x] Operator dashboard: Pricing tab with CRUD for plans
+  - [x] `ACCOUNTING` role has full access (create, update, delete) by default
+  - [x] Internal API: `/internal/plans` for provisioning service to read dynamic price IDs
+  - [x] Provisioning service fetches Stripe price IDs from plan catalog, falls back to env vars
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 

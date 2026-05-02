@@ -3,7 +3,7 @@ import { z } from 'zod'
 import Stripe from 'stripe'
 import { prisma } from '../lib/prisma.js'
 import { assertStripe } from '../lib/stripe.js'
-import { pushTenantToMainApp, validateDiscountCode, useDiscountCode } from '../lib/main-app.js'
+import { pushTenantToMainApp, validateDiscountCode, useDiscountCode, getPlanFromMainApp } from '../lib/main-app.js'
 
 const router = Router()
 
@@ -28,7 +28,21 @@ const lookupSchema = z.object({
 
 const bypassStripe = process.env.STRIPE_BYPASS === 'true'
 
-function getStripePriceId(billingPeriod: string): string {
+async function getStripePriceId(planName: string, billingPeriod: string): Promise<string> {
+  // Try to fetch price IDs from the main app plan catalog first
+  try {
+    const plan = await getPlanFromMainApp(planName)
+    if (billingPeriod === 'ANNUAL' && plan.stripeAnnualPriceId) {
+      return plan.stripeAnnualPriceId
+    }
+    if (billingPeriod === 'MONTHLY' && plan.stripeMonthlyPriceId) {
+      return plan.stripeMonthlyPriceId
+    }
+  } catch (err) {
+    console.warn('Failed to fetch plan from main app, falling back to env vars:', err)
+  }
+
+  // Fallback to environment variables
   if (billingPeriod === 'ANNUAL') {
     const id = process.env.STRIPE_ANNUAL_PRICE_ID
     if (!id) throw new Error('STRIPE_ANNUAL_PRICE_ID not configured')
@@ -99,7 +113,7 @@ router.post('/', async (req, res) => {
         trial_end: Math.floor(trialEndsAt.getTime() / 1000),
         items: [
           {
-            price: getStripePriceId(billingPeriod),
+            price: await getStripePriceId('FLAT_RATE', billingPeriod),
           },
         ],
         metadata: { subdomain },

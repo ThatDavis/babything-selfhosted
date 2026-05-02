@@ -12,6 +12,7 @@ export const SECTION_PERMISSIONS: Record<string, OperatorRole[]> = {
   operators: ['GLOBAL_ADMIN'],
   discounts: ['ACCOUNTING', 'GLOBAL_ADMIN'],
   templates: ['GLOBAL_ADMIN'],
+  plans: ['ACCOUNTING', 'GLOBAL_ADMIN'],
 }
 
 export function getAccessibleSections(role: OperatorRole): string[] {
