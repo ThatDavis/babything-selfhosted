@@ -4,9 +4,10 @@
 # Before first start, generate mTLS certs:
 #   ./scripts/generate-mtls-certs
 #
-# This stack is designed to run behind an external reverse proxy (nginx, Caddy,
-# cloud load balancer, etc.) that terminates TLS and forwards plain HTTP.
-# The included nginx service handles subdomain routing and path-based proxies.
+# TLS can be terminated directly in the nginx container (port 443) or by an
+# external reverse proxy forwarding plain HTTP to port 80. When using Cloudflare,
+# place your Origin CA certificates in certs/cloudflare/ and set Cloudflare's
+# SSL/TLS mode to "Full (strict)".
 # Set TRUSTED_PROXIES so the API sees real client IPs.
 
 networks:
@@ -114,10 +115,10 @@ services:
     networks: [frontend]
     ports:
       - "${PORT:-80}:80"
-      # - "${TLS_PORT:-443}:443"  # uncomment when TLS certs are configured directly
+      - "${TLS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.cloud.conf:/etc/nginx/nginx.conf:ro
-      # - ./certs:/etc/nginx/certs:ro  # uncomment when TLS certs are configured directly
+      - ./certs/cloudflare:/etc/nginx/certs:ro
     depends_on:
       - api
       - web
