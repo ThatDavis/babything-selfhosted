@@ -5,6 +5,13 @@ import { requireInternalKey } from '../middleware/internal.js'
 
 const router = Router()
 
+const RESERVED_SUBDOMAINS = new Set([
+  'operator', 'www', 'api', 'mail', 'admin', 'support', 'help', 'billing',
+  'provisioning', 'landing', 'web', 'app', 'status', 'blog', 'docs', 'static',
+  'cdn', 'staging', 'dev', 'test', 'demo', 'api-v1', 'api-v2', 'socket',
+  'ws', 'health', 'metrics', 'grafana', 'prometheus', 'registry', 'git',
+])
+
 // ── Create tenant (called by provisioning service) ─────────
 const createTenantSchema = z.object({
   subdomain: z.string().min(1),
@@ -19,6 +26,11 @@ router.post('/tenants', requireInternalKey, async (req, res) => {
   const result = createTenantSchema.safeParse(req.body)
   if (!result.success) {
     res.status(400).json({ error: result.error.flatten() })
+    return
+  }
+
+  if (RESERVED_SUBDOMAINS.has(result.data.subdomain)) {
+    res.status(409).json({ error: 'Subdomain is reserved' })
     return
   }
 

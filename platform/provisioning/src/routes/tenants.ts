@@ -7,6 +7,13 @@ import { pushTenantToMainApp, validateDiscountCode, useDiscountCode } from '../l
 
 const router = Router()
 
+const RESERVED_SUBDOMAINS = new Set([
+  'operator', 'www', 'api', 'mail', 'admin', 'support', 'help', 'billing',
+  'provisioning', 'landing', 'web', 'app', 'status', 'blog', 'docs', 'static',
+  'cdn', 'staging', 'dev', 'test', 'demo', 'api-v1', 'api-v2', 'socket',
+  'ws', 'health', 'metrics', 'grafana', 'prometheus', 'registry', 'git',
+])
+
 const createSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
@@ -36,6 +43,11 @@ router.post('/', async (req, res) => {
   }
 
   const { email, name, subdomain, billingPeriod, discountCode } = result.data
+
+  if (RESERVED_SUBDOMAINS.has(subdomain)) {
+    res.status(409).json({ error: 'Subdomain is reserved' })
+    return
+  }
 
   const existing = await prisma.tenantSubscription.findUnique({
     where: { subdomain },

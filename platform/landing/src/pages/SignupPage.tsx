@@ -14,6 +14,13 @@ export default function SignupPage() {
   const [discountCode, setDiscountCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const RESERVED_SUBDOMAINS = new Set([
+    'operator', 'www', 'api', 'mail', 'admin', 'support', 'help', 'billing',
+    'provisioning', 'landing', 'web', 'app', 'status', 'blog', 'docs', 'static',
+    'cdn', 'staging', 'dev', 'test', 'demo', 'api-v1', 'api-v2', 'socket',
+    'ws', 'health', 'metrics', 'grafana', 'prometheus', 'registry', 'git',
+  ])
   const [result, setResult] = useState<{
     subdomain: string
     trialEndsAt: string
@@ -22,6 +29,10 @@ export default function SignupPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    if (RESERVED_SUBDOMAINS.has(subdomain)) {
+      setError('This subdomain is reserved. Please choose another.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
