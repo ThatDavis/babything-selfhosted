@@ -115,7 +115,7 @@ DEPLOYMENT_MODE=selfhosted   # or "cloud"
 | **Main App** (`api` + `web`) | Runtime: users, babies, events, real-time sync, PDF reports, email delivery (cloud), Google OAuth callback handling | Node.js + Express + Prisma + React + Vite |
 | **Provisioning Service** | Stripe webhooks, tenant lifecycle, subscription state, customer record, pushing tenant creation/status to main app | Node.js + Express + Prisma + SQLite (or shared Postgres) |
 | **Landing + Customer Dashboard** | Marketing site, pricing, trial signup, Stripe Checkout, subscription management (update card, cancel, export data) | React / Next.js or Astro |
-| **Traefik** | Edge router: wildcard SSL (`*.babything.app`), subdomain → main app container | Docker container |
+| **Nginx** | Edge router: wildcard SSL (`*.babything.app`), subdomain → main app container, path-based routing for landing/provisioning | Docker container |
 | **Redis** | Tenant status cache (subdomain → status, TTL 5 min) | Docker container |
 | **Postgres** | Two logical databases: `babything` (tenant data) and `provisioning` (billing/customers) | Single server instance |
 
@@ -238,9 +238,9 @@ with a **1-hour grace period** before blocking.
 
 ### Phase 0 — Foundation (Before Code)
 
-- [ ] Register `babything.app` (or similar)
-- [ ] Set up Stripe account with Product + Price ($8/mo, $77/yr)
-- [ ] Set up Google Cloud project for OAuth (platform-managed)
+- [x] Register `babything.app` (or similar)
+- [x] Set up Stripe account with Product + Price ($8/mo, $77/yr)
+- [x] Set up Google Cloud project for OAuth (platform-managed)
 - [ ] Provision VPS (recommendation: Hetzner CX42 — 4 vCPU, 16GB RAM, ~$18/mo)
 - [ ] Set up Resend or Postmark account for transactional email
 - [ ] Write Privacy Policy and Terms of Service (GDPR / COPPA compliant)
@@ -361,10 +361,10 @@ all tenants.
 - [ ] **Import UI**
   - Cloud Admin Settings → "Import from Self-Hosted" accepts file upload.
   - Validates and imports. Idempotent (skips existing records by ID).
-- [ ] **Operator dashboard** (simple React app or Retool)
-  - List all tenants, status, trial dates, MRR.
-  - Trigger backup, restart, or upgrade for a tenant.
-  - View Stripe subscription status per tenant.
+- [~] **Operator dashboard** (API complete, UI in progress)
+  - `GET /admin/tenants` returns all tenants with status, trial dates, user/baby counts.
+  - v2: Full UI with operator roles, audit logging, suspend/activate actions.
+  - See `PROGRESS.md` Phase 5 for operator dashboard v2 plan.
 - [ ] **Automated backups**
   - Nightly `pg_dump` of main app DB to S3-compatible storage.
   - 30-day retention.
@@ -380,13 +380,18 @@ in under 5 minutes.
 
 ### Phase 5 — Growth & Hardening (Months 3–6)
 
-- [ ] **Security upgrades**
-  - Replace shared API key with mTLS between provisioning service and main app.
+- [x] **Security upgrades**
+  - ~~Replace shared API key with mTLS between provisioning service and main app.~~ ✅ Done
   - Security audit of RLS policies and internal endpoints.
-- [ ] **Annual plan promotion**
-  - ~20% discount to improve cash flow and reduce churn.
-- [ ] **Referral program**
-  - "Give a week, get a week" — referrer and referee both get trial extension.
+- [x] **Annual plan promotion**
+  - ~20% discount to improve cash flow and reduce churn. ✅ Done
+- [x] **Referral program**
+  - "Give a week, get a week" — referrer and referee both get trial extension. ✅ Done
+- [ ] **Operator Dashboard v2** (see PROGRESS.md)
+  - Operator role & permission system
+  - Audit logging
+  - Cross-tenant management UI
+  - Suspend/activate tenants, extend trials
 - [ ] **Feature: Monitor v2 for cloud**
   - WebRTC or WebSocket-based camera streaming that works without exposing
     local RTSP to the internet (e.g., a lightweight companion app or WebRTC
@@ -394,9 +399,9 @@ in under 5 minutes.
 - [ ] **Feature: Custom OAuth (enterprise)**
   - Allow cloud tenants to configure their own OAuth providers (SAML, Authentik,
     Okta). Higher-tier pricing.
-- [ ] **Affiliate program**
+- [x] **Affiliate program**
   - Mommy bloggers, pediatrician offices, doulas.
-  - 20% recurring commission via Rewardful or Tolt.
+  - 20% recurring commission via Rewardful or Tolt. ✅ Done
 - [ ] **Multi-region**
   - If EU customer base grows, deploy EU VPS with region routing.
 
@@ -445,7 +450,7 @@ babything/
 │       │   │   └── account.tsx     # Subscription management
 │       └── Dockerfile
 ├── docker-compose.yml          # Self-host template
-├── docker-compose.cloud.yml    # NEW: Cloud stack (Traefik, API, Web, Redis, Postgres)
+├── docker-compose.cloud.yml    # Cloud stack (Nginx, API, Web, Redis, Postgres, Provisioning, Landing)
 └── SUBSCRIPTION_ROADMAP.md     # This file
 ```
 
@@ -532,5 +537,5 @@ If you want to launch fast:
 
 ---
 
-*Last updated: 2026-04-29*  
-*Status: Architecture locked — ready for Phase 1 implementation*
+*Last updated: 2026-05-02*  
+*Status: Phases 1–4 complete. Phase 5 in progress.*
