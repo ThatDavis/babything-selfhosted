@@ -107,11 +107,16 @@ Building advanced features and hardening the platform.
   - [x] Update DEPLOYMENT.md with new cloud deploy instructions
   - [x] Update REQUIREMENTS.md tech stack
 - [ ] Operator Dashboard v2 (cross-tenant management UI)
-  - [ ] Operator role & permission system (separate from tenant admin)
-  - [ ] Audit log schema & middleware (who did what, when)
-  - [ ] Dashboard UI: tenant table with status, trials, user/baby counts
-  - [ ] Management actions: suspend/activate tenant, extend trial
-  - [ ] Security: strong auth, rate limiting, IP allowlist option
+  - [ ] Operator schema: `Operator` table with roles (`helpdesk`, `accounting`, `global_admin`)
+  - [ ] Operator auth: separate login/logout, JWT middleware, `requireOperatorAuth`
+  - [ ] Audit log schema & middleware (`AuditLog` table: operatorId, action, target, oldValue, newValue)
+  - [ ] Dashboard UI: tenant table with status, trials, user/baby counts, MRR
+  - [ ] Role-based access control on API routes
+    - `helpdesk`: read-only tenant list & details
+    - `accounting`: read billing data, extend trials, modify billing status
+    - `global_admin`: all actions + manage operators + view audit logs
+  - [ ] Management actions: suspend/activate tenant, extend trial, delete tenant
+  - [ ] Security: rate limiting on operator endpoints, optional IP allowlist
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 

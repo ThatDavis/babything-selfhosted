@@ -355,3 +355,40 @@ model SystemSettings {
   streamEnabled Boolean  @default(false)
   updatedAt     DateTime @updatedAt
 }
+
+enum OperatorRole {
+  HELPDESK
+  ACCOUNTING
+  GLOBAL_ADMIN
+}
+
+model Operator {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  role         OperatorRole @default(HELPDESK)
+  isActive     Boolean      @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  action     String   // e.g. "suspend_tenant", "extend_trial", "login", "create_operator"
+  targetType String?  // e.g. "tenant", "operator"
+  targetId   String?  // the ID of the target entity
+  oldValue   String?  // JSON string of previous state
+  newValue   String?  // JSON string of new state
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
