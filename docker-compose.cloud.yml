@@ -54,6 +54,8 @@ services:
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.${ROOT_DOMAIN}}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      PROVISIONING_URL: http://provisioning:3002
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       MTLS_ENABLED: "true"
       MTLS_PORT: 3003
       TLS_CERT_PATH: /certs/api-server.crt
@@ -108,6 +110,7 @@ services:
       STRIPE_ANNUAL_PRICE_ID: ${STRIPE_ANNUAL_PRICE_ID}
       STRIPE_BYPASS: ${STRIPE_BYPASS:-}
       MAIN_APP_URL: https://api:3003
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       MTLS_ENABLED: "true"
       TLS_CERT_PATH: /certs/provisioning-client.crt
       TLS_KEY_PATH: /certs/provisioning-client.key

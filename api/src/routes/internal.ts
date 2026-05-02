@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireInternalKey } from '../middleware/internal.js'
+import { deleteTenantInProvisioning } from '../lib/provisioning.js'
 
 const router = Router()
 
@@ -98,7 +99,11 @@ router.patch('/tenants/:subdomain', requireInternalKey, async (req, res) => {
 
 // ── Delete tenant (hard delete, GDPR/post-retention) ────────
 router.delete('/tenants/:subdomain', requireInternalKey, async (req, res) => {
-  await prisma.tenant.delete({ where: { subdomain: req.params.subdomain } })
+  const { subdomain } = req.params
+  await prisma.tenant.delete({ where: { subdomain } })
+  await deleteTenantInProvisioning(subdomain).catch((err) => {
+    console.error('Failed to delete tenant in provisioning:', err)
+  })
   res.status(204).send()
 })
 

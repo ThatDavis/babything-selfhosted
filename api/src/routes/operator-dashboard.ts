@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireOperatorAuth, requireOperatorRole, OperatorAuthRequest } from '../middleware/operator-auth.js'
 import { logOperatorAction } from '../lib/operator-audit.js'
+import { deleteTenantInProvisioning } from '../lib/provisioning.js'
 
 const router = Router()
 
@@ -177,6 +178,9 @@ router.delete('/tenants/:subdomain', requireOperatorAuth, requireOperatorRole('G
   if (!tenant) { res.status(404).json({ error: 'Tenant not found' }); return }
 
   await prisma.tenant.delete({ where: { subdomain } })
+  await deleteTenantInProvisioning(subdomain).catch((err) => {
+    console.error('Failed to delete tenant in provisioning:', err)
+  })
 
   const actorId = (req as OperatorAuthRequest).operatorId
   await logOperatorAction({

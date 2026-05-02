@@ -201,6 +201,33 @@ router.post('/lookup', async (req, res) => {
   res.json({ subdomain: customer.tenants[0].subdomain })
 })
 
+router.delete('/:subdomain', async (req, res) => {
+  const internalKey = req.headers['x-internal-key']
+  if (!internalKey || internalKey !== process.env.INTERNAL_API_KEY) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  const tenant = await prisma.tenantSubscription.findUnique({
+    where: { subdomain: req.params.subdomain },
+  })
+  if (!tenant) {
+    res.status(404).json({ error: 'Tenant not found' })
+    return
+  }
+
+  await prisma.tenantSubscription.delete({ where: { id: tenant.id } })
+
+  const remaining = await prisma.tenantSubscription.count({
+    where: { customerId: tenant.customerId },
+  })
+  if (remaining === 0) {
+    await prisma.customer.delete({ where: { id: tenant.customerId } })
+  }
+
+  res.status(204).send()
+})
+
 router.get('/:subdomain', async (req, res) => {
   const tenant = await prisma.tenantSubscription.findUnique({
     where: { subdomain: req.params.subdomain },

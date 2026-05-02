@@ -126,6 +126,7 @@ Building advanced features and hardening the platform.
   - [x] Management actions: suspend/activate tenant, extend trial, delete tenant
   - [~] Security: rate limiting on operator endpoints (via existing authLimiter), optional IP allowlist — TBD
 - [x] Landing page sign-in: email-to-subdomain lookup + modal + remove footer Account link
+- [x] Fix tenant deletion to clean up provisioning DB (free subdomain + email for reuse)
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
