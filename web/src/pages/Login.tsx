@@ -101,15 +101,18 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-stone-500 mt-6">
-          No account? <Link to={() => {
-            const p = new URLSearchParams()
-            if (redirectTo !== '/') p.set('redirect', redirectTo)
-            if (prefilledName) p.set('name', prefilledName)
-            if (prefilledEmail) p.set('email', prefilledEmail)
-            return p.toString() ? `/register?${p.toString()}` : '/register'
-          }()} className="text-brand-600 font-medium">Create one</Link>
-        </p>
+        {(() => {
+          const p = new URLSearchParams()
+          if (redirectTo !== '/') p.set('redirect', redirectTo)
+          if (prefilledName) p.set('name', prefilledName)
+          if (prefilledEmail) p.set('email', prefilledEmail)
+          const registerTo = p.toString() ? `/register?${p.toString()}` : '/register'
+          return (
+            <p className="text-center text-sm text-stone-500 mt-6">
+              No account? <Link to={registerTo} className="text-brand-600 font-medium">Create one</Link>
+            </p>
+          )
+        })()}
       </div>
     </div>
   )
