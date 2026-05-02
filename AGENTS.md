@@ -131,3 +131,4 @@ Sections (tabs) in the operator dashboard are config-driven via `api/src/lib/ope
 - Prisma schema: `api/prisma/schema.prisma`
 - Landing API client: `platform/landing/src/lib/api.ts`
 - Email sending & templates: `api/src/lib/mailer.ts`
+ 

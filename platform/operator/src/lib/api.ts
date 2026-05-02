@@ -152,4 +152,6 @@ export const api = {
     request<{ ok: boolean }>(`/operator/dashboard/email-templates/${id}`, { method: 'DELETE' }),
   sendTestEmail: (name: string, to: string) =>
     request<{ ok: boolean }>(`/operator/dashboard/email-templates/${name}/test`, { method: 'POST', body: JSON.stringify({ to }) }),
+  seedEmailTemplates: () =>
+    request<{ ok: boolean }>('/operator/dashboard/email-templates/seed', { method: 'POST' }),
 }

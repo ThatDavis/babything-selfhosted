@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { requireOperatorAuth, requireOperatorRole, OperatorAuthRequest } from '../middleware/operator-auth.js'
 import { logOperatorAction } from '../lib/operator-audit.js'
 import { deleteTenantInProvisioning } from '../lib/provisioning.js'
-import { sendTemplateTestEmail } from '../lib/mailer.js'
+import { sendTemplateTestEmail, defaultEmailTemplates } from '../lib/mailer.js'
 
 const router = Router()
 
@@ -415,6 +415,29 @@ router.post('/email-templates/:name/test', requireOperatorAuth, requireOperatorR
     targetType: 'email_template',
     targetId: name,
     newValue: { to, templateName: name },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ ok: true })
+})
+
+// ── Reset templates to defaults (global_admin only) ────────
+router.post('/email-templates/seed', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  for (const [name, { subject, html }] of Object.entries(defaultEmailTemplates)) {
+    await prisma.emailTemplate.upsert({
+      where: { name },
+      update: { subject, htmlBody: html },
+      create: { name, subject, htmlBody: html },
+    })
+  }
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'seed_email_templates',
+    targetType: 'email_template',
+    targetId: 'all',
+    newValue: { templates: Object.keys(defaultEmailTemplates) },
     ipAddress: req.ip ?? req.socket?.remoteAddress,
   })
 

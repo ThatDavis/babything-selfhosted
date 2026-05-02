@@ -601,6 +601,23 @@ function TemplatesTab() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Email Templates</h2>
+        <button
+          onClick={async () => {
+            if (!confirm('Reset all email templates to default content? Any customizations will be overwritten.')) return
+            setError('')
+            setMessage('')
+            try {
+              await api.seedEmailTemplates()
+              setMessage('All templates reset to defaults.')
+              fetchTemplates()
+            } catch (err: any) {
+              setError(err.message)
+            }
+          }}
+          className="btn-secondary text-xs"
+        >
+          Reset to Defaults
+        </button>
       </div>
 
       {message && <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{message}</div>}
