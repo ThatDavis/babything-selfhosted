@@ -75,6 +75,26 @@ The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MOD
 | Provisioning | `platform/provisioning/` | 3002 | Stripe billing, tenant lifecycle |
 | Nginx | `nginx/` | 80 | Reverse proxy, SSL, subdomain routing |
 
+### Email delivery
+
+The mailer supports three providers in priority order:
+
+1. **Resend API** — `RESEND_API_KEY` env var set → uses Resend SDK
+   - Preferred for cloud deployments
+   - `FROM_EMAIL` and `FROM_NAME` env vars control sender identity
+
+2. **Env-based SMTP** — `SMTP_HOST` env var set → uses `nodemailer`
+   - Works in both cloud and self-hosted modes
+   - `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
+   - Useful for cloud if you prefer your own SMTP relay over Resend
+
+3. **DB-based SMTP** — configured via Admin Settings → SMTP tab
+   - Self-hosted only (cloud hides the SMTP UI)
+   - Stored in `SmtpConfig` table
+   - Falls back to this when neither Resend nor env SMTP is configured
+
+If no provider is configured, transactional emails silently fail (best-effort) except for report emails which require a configured provider.
+
 ### Email templates
 All transactional emails are driven by the `EmailTemplate` table (`api/prisma/schema.prisma`).
 
@@ -83,7 +103,7 @@ All transactional emails are driven by the `EmailTemplate` table (`api/prisma/sc
 - **Fallback behavior:** If no custom template exists in the DB, the mailer falls back to hardcoded defaults
 - **Operator editing:** Global admins can edit templates via the **Email Templates** tab in the operator dashboard (`platform/operator/src/pages/DashboardPage.tsx`)
 - **Adding a new email type:**
-  1. Add a `sendXEmail` function in `api/src/lib/mailer.ts` using `sendTemplatedEmail`
+  1. Add a `sendXEmail` function in `api/src/lib/mailer.ts` using `sendEmail`
   2. Add the template name + variables to the built-in list in `TemplatesTab`
   3. Add a default template in the fallback object
   4. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`

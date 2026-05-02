@@ -242,7 +242,7 @@ with a **1-hour grace period** before blocking.
 - [x] Set up Stripe account with Product + Price ($8/mo, $77/yr)
 - [x] Set up Google Cloud project for OAuth (platform-managed)
 - [ ] Provision VPS (recommendation: Hetzner CX42 — 4 vCPU, 16GB RAM, ~$18/mo)
-- [ ] Set up Resend or Postmark account for transactional email
+- [x] Set up Resend account for transactional email
 - [ ] Write Privacy Policy and Terms of Service (GDPR / COPPA compliant)
 
 ---
@@ -410,6 +410,10 @@ in under 5 minutes.
   - Config-driven role mapping for each dashboard section.
   - Unassigned sections are inaccessible; global_admin bypasses all checks.
   - Frontend fetches permissions from API and renders tabs dynamically.
+- [x] **Cloud email delivery**
+  - Resend API for transactional email in cloud mode.
+  - Self-hosted mode continues using user-configured SMTP.
+  - Env vars: `RESEND_API_KEY`, `FROM_EMAIL`, `FROM_NAME`.
 - [ ] **Multi-region**
   - If EU customer base grows, deploy EU VPS with region routing.
 

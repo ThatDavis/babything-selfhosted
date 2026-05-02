@@ -1,8 +1,37 @@
+import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 import { prisma } from './prisma.js'
 import { decryptOptional } from './crypto.js'
 
-async function getTransport() {
+// ── Provider 1: Resend (cloud, preferred) ──────────────────
+const resendApiKey = process.env.RESEND_API_KEY
+const fromEmail = process.env.FROM_EMAIL ?? 'hello@babything.app'
+const fromName = process.env.FROM_NAME ?? 'Babything'
+
+function getResendClient() {
+  if (!resendApiKey) return null
+  return new Resend(resendApiKey)
+}
+
+const resendClient = getResendClient()
+
+// ── Provider 2: Env-based SMTP (cloud or self-hosted) ──────
+function getEnvSmtpTransport() {
+  const host = process.env.SMTP_HOST
+  if (!host) return null
+  return nodemailer.createTransport({
+    host,
+    port: parseInt(process.env.SMTP_PORT ?? '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER ?? '',
+      pass: process.env.SMTP_PASS ?? '',
+    },
+  })
+}
+
+// ── Provider 3: DB-based SMTP (self-hosted UI config) ──────
+async function getDbSmtpTransport() {
   const config = await prisma.smtpConfig.findFirst({ where: { enabled: true } })
   if (!config) return null
   return nodemailer.createTransport({
@@ -13,7 +42,12 @@ async function getTransport() {
   })
 }
 
-async function getFrom() {
+async function getSmtpFrom() {
+  // Env-based SMTP sender
+  if (process.env.SMTP_FROM_EMAIL) {
+    return `"${process.env.SMTP_FROM_NAME ?? 'Babything'}" <${process.env.SMTP_FROM_EMAIL}>`
+  }
+  // DB-based SMTP sender
   const config = await prisma.smtpConfig.findFirst({ where: { enabled: true } })
   if (!config) return null
   return `"${config.fromName}" <${config.fromEmail}>`
@@ -36,37 +70,67 @@ async function renderTemplate(
   }
 }
 
-async function sendTemplatedEmail(
-  templateName: string,
+async function sendEmail(
   to: string,
+  templateName: string,
   vars: Record<string, string>,
   defaults: { subject: string; html: string },
-  opts?: { attachments?: any[]; requireSmtp?: boolean }
+  opts?: { attachments?: any[]; requireTransport?: boolean }
 ) {
-  const transport = await getTransport()
-  if (!transport) {
-    if (opts?.requireSmtp) throw new Error('SMTP not configured')
-    return
-  }
-
   const rendered = await renderTemplate(templateName, vars)
   const subject = rendered?.subject ?? interpolate(defaults.subject, vars)
   const html = rendered?.html ?? interpolate(defaults.html, vars)
 
-  await transport.sendMail({
-    from: await getFrom() ?? undefined,
-    to,
-    subject,
-    html,
-    attachments: opts?.attachments,
-  })
+  // 1. Try Resend first (cloud preferred)
+  if (resendClient) {
+    await resendClient.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to,
+      subject,
+      html,
+      attachments: opts?.attachments?.map(a => ({
+        filename: a.filename,
+        content: a.content,
+      })),
+    })
+    return
+  }
+
+  // 2. Try env-based SMTP
+  const envTransport = getEnvSmtpTransport()
+  if (envTransport) {
+    await envTransport.sendMail({
+      from: await getSmtpFrom() ?? undefined,
+      to,
+      subject,
+      html,
+      attachments: opts?.attachments,
+    })
+    return
+  }
+
+  // 3. Try DB-based SMTP (self-hosted UI config)
+  const dbTransport = await getDbSmtpTransport()
+  if (dbTransport) {
+    await dbTransport.sendMail({
+      from: await getSmtpFrom() ?? undefined,
+      to,
+      subject,
+      html,
+      attachments: opts?.attachments,
+    })
+    return
+  }
+
+  // No transport available
+  if (opts?.requireTransport) throw new Error('Email not configured')
 }
 
 // ── Welcome email (new registration) ───────────────────────
 export async function sendWelcomeEmail(to: string, name: string, appUrl: string) {
-  await sendTemplatedEmail(
-    'welcome',
+  await sendEmail(
     to,
+    'welcome',
     { name, appUrl },
     {
       subject: 'Welcome to Babything, {{name}}!',
@@ -82,9 +146,9 @@ export async function sendWelcomeEmail(to: string, name: string, appUrl: string)
 
 // ── Invite email ───────────────────────────────────────────
 export async function sendInviteEmail(to: string, babyName: string, inviterName: string, inviteUrl: string) {
-  await sendTemplatedEmail(
-    'invite',
+  await sendEmail(
     to,
+    'invite',
     { babyName, inviterName, inviteUrl },
     {
       subject: '{{inviterName}} invited you to track {{babyName}} on Babything',
@@ -100,9 +164,9 @@ export async function sendInviteEmail(to: string, babyName: string, inviterName:
 
 // ── Password reset email ───────────────────────────────────
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
-  await sendTemplatedEmail(
-    'password_reset',
+  await sendEmail(
     to,
+    'password_reset',
     { name, resetUrl },
     {
       subject: 'Reset your Babything password',
@@ -118,9 +182,9 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
 
 // ── Report email (with PDF attachment) ─────────────────────
 export async function sendReportEmail(to: string, babyName: string, pdfBuffer: Buffer, filename: string) {
-  await sendTemplatedEmail(
-    'report',
+  await sendEmail(
     to,
+    'report',
     { babyName },
     {
       subject: 'Pediatric Report for {{babyName}}',
@@ -131,7 +195,7 @@ export async function sendReportEmail(to: string, babyName: string, pdfBuffer: B
       `,
     },
     {
-      requireSmtp: true,
+      requireTransport: true,
       attachments: [{
         filename,
         content: pdfBuffer,
@@ -141,15 +205,37 @@ export async function sendReportEmail(to: string, babyName: string, pdfBuffer: B
   )
 }
 
-// ── SMTP test email ────────────────────────────────────────
+// ── Test email ─────────────────────────────────────────────
 export async function sendTestEmail(to: string) {
-  const transport = await getTransport()
-  if (!transport) throw new Error('SMTP not configured')
-  await transport.verify()
-  await transport.sendMail({
-    from: await getFrom() ?? undefined,
+  if (resendClient) {
+    await resendClient.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to,
+      subject: 'Babything — Email test',
+      text: 'Cloud email is configured correctly.',
+    })
+    return
+  }
+
+  const envTransport = getEnvSmtpTransport()
+  if (envTransport) {
+    await envTransport.verify()
+    await envTransport.sendMail({
+      from: await getSmtpFrom() ?? undefined,
+      to,
+      subject: 'Babything — Email test',
+      text: 'SMTP is configured correctly.',
+    })
+    return
+  }
+
+  const dbTransport = await getDbSmtpTransport()
+  if (!dbTransport) throw new Error('Email not configured')
+  await dbTransport.verify()
+  await dbTransport.sendMail({
+    from: await getSmtpFrom() ?? undefined,
     to,
-    subject: 'Babything — SMTP test',
+    subject: 'Babything — Email test',
     text: 'SMTP is configured correctly.',
   })
 }
