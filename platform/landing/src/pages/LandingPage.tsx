@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import AffiliateScript from '../components/AffiliateScript'
 
 const AFFILIATE_SIGNUP_URL = import.meta.env.VITE_AFFILIATE_SIGNUP_URL
+const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com/ThatDavis/babything-cloud'
+const DONATION_URL = import.meta.env.VITE_DONATION_URL
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -49,43 +51,80 @@ export default function LandingPage() {
 
         <section className="text-center space-y-6">
           <h2 className="text-3xl font-bold text-stone-800">Simple pricing</h2>
-          <div className="card max-w-sm mx-auto">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <span className={`text-sm font-medium ${!annual ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
-              <button
-                onClick={() => setAnnual(!annual)}
-                className="relative w-12 h-6 rounded-full bg-brand-200 transition-colors"
-                aria-label="Toggle annual billing"
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-brand-600 transition-transform ${annual ? 'translate-x-6' : ''}`}
-                />
+          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            {/* Cloud */}
+            <div className="card">
+              <h3 className="font-semibold text-stone-700 mb-2">Cloud</h3>
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <span className={`text-sm font-medium ${!annual ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
+                <button
+                  onClick={() => setAnnual(!annual)}
+                  className="relative w-12 h-6 rounded-full bg-brand-200 transition-colors"
+                  aria-label="Toggle annual billing"
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-brand-600 transition-transform ${annual ? 'translate-x-6' : ''}`}
+                  />
+                </button>
+                <span className={`text-sm font-medium ${annual ? 'text-stone-800' : 'text-stone-400'}`}>Annual</span>
+              </div>
+
+              {annual ? (
+                <>
+                  <p className="text-4xl font-bold text-brand-600">$77<span className="text-lg text-stone-500 font-normal">/yr</span></p>
+                  <p className="text-sm text-green-600 mt-1 font-medium">~20% savings vs monthly</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-4xl font-bold text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
+                  <p className="text-sm text-stone-500 mt-1">or $77/yr (~20% savings)</p>
+                </>
+              )}
+
+              <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
+                <li>✓ Unlimited babies & caregivers</li>
+                <li>✓ All tracking features</li>
+                <li>✓ Automatic SSL & backups</li>
+                <li>✓ Platform-managed email & sign-in</li>
+                <li>✓ Private subdomain</li>
+              </ul>
+              <button onClick={() => navigate(`/signup?period=${annual ? 'annual' : 'monthly'}`)} className="btn-primary w-full mt-6">
+                Start free trial
               </button>
-              <span className={`text-sm font-medium ${annual ? 'text-stone-800' : 'text-stone-400'}`}>Annual</span>
             </div>
 
-            {annual ? (
-              <>
-                <p className="text-4xl font-bold text-brand-600">$77<span className="text-lg text-stone-500 font-normal">/yr</span></p>
-                <p className="text-sm text-green-600 mt-1 font-medium">~20% savings vs monthly</p>
-              </>
-            ) : (
-              <>
-                <p className="text-4xl font-bold text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
-                <p className="text-sm text-stone-500 mt-1">or $77/yr (~20% savings)</p>
-              </>
-            )}
+            {/* Self-hosted */}
+            <div className="card">
+              <h3 className="font-semibold text-stone-700 mb-2">Self-hosted</h3>
+              <p className="text-4xl font-bold text-brand-600">Free</p>
+              <p className="text-sm text-stone-500 mt-1">Run on your own hardware</p>
 
-            <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
-              <li>✓ Unlimited babies & caregivers</li>
-              <li>✓ All tracking features</li>
-              <li>✓ Automatic SSL & backups</li>
-              <li>✓ Platform-managed email & sign-in</li>
-              <li>✓ Private subdomain</li>
-            </ul>
-            <button onClick={() => navigate(`/signup?period=${annual ? 'annual' : 'monthly'}`)} className="btn-primary w-full mt-6">
-              Start free trial
-            </button>
+              <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
+                <li>✓ All tracking features</li>
+                <li>✓ Unlimited babies & caregivers</li>
+                <li>✓ Docker-based deployment</li>
+                <li>✓ Own your data</li>
+                <li>✓ Optional donation</li>
+              </ul>
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost w-full text-center block mt-6"
+              >
+                View on GitHub →
+              </a>
+              {DONATION_URL && (
+                <a
+                  href={DONATION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-brand-600 hover:text-brand-700 mt-3 inline-block"
+                >
+                  Support the project ❤
+                </a>
+              )}
+            </div>
           </div>
         </section>
 
