@@ -472,7 +472,8 @@ const createPlanSchema = z.object({
   name: z.string().min(1).max(50),
   description: z.string().max(500).optional(),
   monthlyPrice: z.number().int().min(0),
-  annualPrice: z.number().int().min(0),
+  annualPrice: z.number().int().min(0).optional(),
+  annualDiscountPercent: z.number().int().min(0).max(100).optional(),
   stripeMonthlyPriceId: z.string().max(100).optional(),
   stripeAnnualPriceId: z.string().max(100).optional(),
   features: z.array(z.string()).default([]),
@@ -489,12 +490,22 @@ router.post('/plans', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GL
   })
   if (existing) { res.status(409).json({ error: 'Plan name already exists' }); return }
 
+  let annualPrice = result.data.annualPrice ?? 0
+  let annualDiscountPercent = result.data.annualDiscountPercent ?? null
+
+  if (annualDiscountPercent != null) {
+    annualPrice = Math.round(result.data.monthlyPrice * 12 * (100 - annualDiscountPercent) / 100)
+  } else if (!result.data.annualPrice) {
+    annualPrice = Math.round(result.data.monthlyPrice * 12)
+  }
+
   const plan = await prisma.plan.create({
     data: {
       name: result.data.name,
       description: result.data.description,
       monthlyPrice: result.data.monthlyPrice,
-      annualPrice: result.data.annualPrice,
+      annualPrice,
+      annualDiscountPercent,
       stripeMonthlyPriceId: result.data.stripeMonthlyPriceId,
       stripeAnnualPriceId: result.data.stripeAnnualPriceId,
       features: result.data.features,
@@ -521,6 +532,7 @@ const updatePlanSchema = z.object({
   description: z.string().max(500).optional(),
   monthlyPrice: z.number().int().min(0).optional(),
   annualPrice: z.number().int().min(0).optional(),
+  annualDiscountPercent: z.number().int().min(0).max(100).optional(),
   stripeMonthlyPriceId: z.string().max(100).optional(),
   stripeAnnualPriceId: z.string().max(100).optional(),
   features: z.array(z.string()).optional(),
@@ -535,9 +547,20 @@ router.patch('/plans/:id', requireOperatorAuth, requireOperatorRole('ACCOUNTING'
   const plan = await prisma.plan.findUnique({ where: { id: req.params.id } })
   if (!plan) { res.status(404).json({ error: 'Plan not found' }); return }
 
+  const data: any = { ...result.data }
+  const monthlyPrice = data.monthlyPrice ?? plan.monthlyPrice
+
+  if (data.annualDiscountPercent != null) {
+    data.annualPrice = Math.round(monthlyPrice * 12 * (100 - data.annualDiscountPercent) / 100)
+  } else if (data.annualPrice == null && plan.annualDiscountPercent != null) {
+    // If neither annualPrice nor annualDiscountPercent is provided, but the plan previously
+    // had a discount, recalculate based on the new monthly price
+    data.annualPrice = Math.round(monthlyPrice * 12 * (100 - plan.annualDiscountPercent) / 100)
+  }
+
   const updated = await prisma.plan.update({
     where: { id: req.params.id },
-    data: result.data,
+    data,
   })
 
   const actorId = (req as OperatorAuthRequest).operatorId

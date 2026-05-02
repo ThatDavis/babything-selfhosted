@@ -21,6 +21,7 @@ async function main() {
       description: 'All features, unlimited babies and caregivers.',
       monthlyPrice: 800,
       annualPrice: 7700,
+      annualDiscountPercent: 20,
       features: ['Unlimited babies', 'Unlimited caregivers', 'Real-time sync', 'PDF reports', 'CSV export', 'PWA support'],
       isActive: true,
       sortOrder: 0,

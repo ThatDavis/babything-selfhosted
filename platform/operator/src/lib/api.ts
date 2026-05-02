@@ -74,6 +74,7 @@ export interface Plan {
   description: string | null
   monthlyPrice: number
   annualPrice: number
+  annualDiscountPercent: number | null
   stripeMonthlyPriceId: string | null
   stripeAnnualPriceId: string | null
   features: string[]

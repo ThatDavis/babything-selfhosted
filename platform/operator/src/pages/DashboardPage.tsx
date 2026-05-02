@@ -748,12 +748,18 @@ function PlansTab() {
     description: '',
     monthlyPrice: 800,
     annualPrice: 7700,
+    annualDiscountPercent: null as number | null,
     stripeMonthlyPriceId: '',
     stripeAnnualPriceId: '',
     features: '',
     isActive: true,
     sortOrder: 0,
   })
+  // Raw string inputs for price fields so typing isn't interrupted by formatting
+  const [monthlyInput, setMonthlyInput] = useState('8.00')
+  const [annualInput, setAnnualInput] = useState('77.00')
+  const [discountInput, setDiscountInput] = useState('')
+  const [annualMode, setAnnualMode] = useState<'fixed' | 'discount'>('fixed')
   const [error, setError] = useState('')
 
   const isGlobalAdmin = operator?.role === 'GLOBAL_ADMIN'
@@ -767,53 +773,101 @@ function PlansTab() {
     fetchPlans()
   }, [])
 
+  function centsToDollars(cents: number) {
+    return (cents / 100).toFixed(2)
+  }
+
+  function dollarsToCents(val: string) {
+    return Math.round(parseFloat(val) * 100) || 0
+  }
+
+  function calcAnnualFromDiscount(monthlyCents: number, discount: number) {
+    return Math.round(monthlyCents * 12 * (100 - discount) / 100)
+  }
+
+  function syncAnnualPrice(monthlyCents: number, discount: number | null) {
+    if (annualMode === 'discount' && discount != null) {
+      const annualCents = calcAnnualFromDiscount(monthlyCents, discount)
+      setForm(f => ({ ...f, annualPrice: annualCents }))
+      setAnnualInput(centsToDollars(annualCents))
+    }
+  }
+
   function startEdit(plan: Plan) {
     setEditingId(plan.id)
+    const mode = plan.annualDiscountPercent != null ? 'discount' : 'fixed'
+    setAnnualMode(mode)
     setForm({
       name: plan.name,
       description: plan.description ?? '',
       monthlyPrice: plan.monthlyPrice,
       annualPrice: plan.annualPrice,
+      annualDiscountPercent: plan.annualDiscountPercent,
       stripeMonthlyPriceId: plan.stripeMonthlyPriceId ?? '',
       stripeAnnualPriceId: plan.stripeAnnualPriceId ?? '',
       features: plan.features.join(', '),
       isActive: plan.isActive,
       sortOrder: plan.sortOrder,
     })
+    setMonthlyInput(centsToDollars(plan.monthlyPrice))
+    setAnnualInput(centsToDollars(plan.annualPrice))
+    setDiscountInput(plan.annualDiscountPercent?.toString() ?? '')
     setShowForm(true)
     setError('')
   }
 
   function resetForm() {
     setEditingId(null)
+    setAnnualMode('fixed')
     setForm({
       name: '',
       description: '',
       monthlyPrice: 800,
       annualPrice: 7700,
+      annualDiscountPercent: null,
       stripeMonthlyPriceId: '',
       stripeAnnualPriceId: '',
       features: '',
       isActive: true,
       sortOrder: 0,
     })
+    setMonthlyInput('8.00')
+    setAnnualInput('77.00')
+    setDiscountInput('')
     setError('')
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    const monthlyCents = dollarsToCents(monthlyInput)
+    let annualCents: number
+    let discount: number | null = null
+
+    if (annualMode === 'discount') {
+      discount = parseInt(discountInput) || 0
+      annualCents = calcAnnualFromDiscount(monthlyCents, discount)
+    } else {
+      annualCents = dollarsToCents(annualInput)
+    }
+
     const body: any = {
       name: form.name,
       description: form.description || undefined,
-      monthlyPrice: form.monthlyPrice,
-      annualPrice: form.annualPrice,
+      monthlyPrice: monthlyCents,
+      annualPrice: annualCents,
       stripeMonthlyPriceId: form.stripeMonthlyPriceId || undefined,
       stripeAnnualPriceId: form.stripeAnnualPriceId || undefined,
       features: form.features.split(',').map(f => f.trim()).filter(Boolean),
       isActive: form.isActive,
       sortOrder: form.sortOrder,
     }
+
+    if (annualMode === 'discount') {
+      body.annualDiscountPercent = discount
+    }
+
     try {
       if (editingId) {
         await api.updatePlan(editingId, body)
@@ -852,8 +906,92 @@ function PlansTab() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input placeholder="Plan name (e.g. Flat Rate)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input" required />
             <input placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="input" />
-            <input placeholder="Monthly price" type="number" min={0} step="0.01" value={(form.monthlyPrice / 100).toFixed(2)} onChange={e => setForm(f => ({ ...f, monthlyPrice: Math.round(parseFloat(e.target.value) * 100) || 0 }))} className="input" required />
-            <input placeholder="Annual price" type="number" min={0} step="0.01" value={(form.annualPrice / 100).toFixed(2)} onChange={e => setForm(f => ({ ...f, annualPrice: Math.round(parseFloat(e.target.value) * 100) || 0 }))} className="input" required />
+
+            {/* Monthly price */}
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Monthly price ($)</label>
+              <input
+                type="number" min={0} step="0.01"
+                value={monthlyInput}
+                onChange={e => setMonthlyInput(e.target.value)}
+                onBlur={e => {
+                  const cents = dollarsToCents(e.target.value)
+                  setForm(f => ({ ...f, monthlyPrice: cents }))
+                  setMonthlyInput(centsToDollars(cents))
+                  if (annualMode === 'discount') {
+                    syncAnnualPrice(cents, form.annualDiscountPercent)
+                  }
+                }}
+                className="input" required
+              />
+            </div>
+
+            {/* Annual pricing mode toggle */}
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Annual pricing</label>
+              <div className="flex rounded-lg border border-stone-200 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAnnualMode('fixed')}
+                  className={`flex-1 px-3 py-2 text-sm ${annualMode === 'fixed' ? 'bg-brand-50 text-brand-700 font-medium' : 'bg-white text-stone-600'}`}
+                >
+                  Fixed price
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnnualMode('discount')}
+                  className={`flex-1 px-3 py-2 text-sm ${annualMode === 'discount' ? 'bg-brand-50 text-brand-700 font-medium' : 'bg-white text-stone-600'}`}
+                >
+                  Discount %
+                </button>
+              </div>
+            </div>
+
+            {/* Annual price input (fixed mode) */}
+            {annualMode === 'fixed' && (
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1">Annual price ($)</label>
+                <input
+                  type="number" min={0} step="0.01"
+                  value={annualInput}
+                  onChange={e => setAnnualInput(e.target.value)}
+                  onBlur={e => {
+                    const cents = dollarsToCents(e.target.value)
+                    setForm(f => ({ ...f, annualPrice: cents }))
+                    setAnnualInput(centsToDollars(cents))
+                  }}
+                  className="input" required
+                />
+              </div>
+            )}
+
+            {/* Discount % input (discount mode) */}
+            {annualMode === 'discount' && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-stone-500 mb-1">Annual discount (%)</label>
+                  <input
+                    type="number" min={0} max={100} step="1"
+                    value={discountInput}
+                    onChange={e => {
+                      setDiscountInput(e.target.value)
+                      const discount = parseInt(e.target.value) || 0
+                      const annualCents = calcAnnualFromDiscount(form.monthlyPrice, discount)
+                      setForm(f => ({ ...f, annualPrice: annualCents, annualDiscountPercent: discount }))
+                      setAnnualInput(centsToDollars(annualCents))
+                    }}
+                    className="input" required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-500 mb-1">Calculated annual price</label>
+                  <div className="input bg-stone-50 text-stone-600">
+                    {formatPrice(form.annualPrice)}
+                  </div>
+                </div>
+              </>
+            )}
+
             <input placeholder="Stripe monthly price ID" value={form.stripeMonthlyPriceId} onChange={e => setForm(f => ({ ...f, stripeMonthlyPriceId: e.target.value }))} className="input" />
             <input placeholder="Stripe annual price ID" value={form.stripeAnnualPriceId} onChange={e => setForm(f => ({ ...f, stripeAnnualPriceId: e.target.value }))} className="input" />
             <input placeholder="Features (comma-separated)" value={form.features} onChange={e => setForm(f => ({ ...f, features: e.target.value }))} className="input" />
@@ -877,6 +1015,7 @@ function PlansTab() {
               <th className="table-header">Name</th>
               <th className="table-header">Monthly</th>
               <th className="table-header">Annual</th>
+              <th className="table-header">Discount</th>
               <th className="table-header">Stripe IDs</th>
               <th className="table-header">Status</th>
               <th className="table-header">Actions</th>
@@ -891,6 +1030,13 @@ function PlansTab() {
                 </td>
                 <td className="table-cell">{formatPrice(p.monthlyPrice)}</td>
                 <td className="table-cell">{formatPrice(p.annualPrice)}</td>
+                <td className="table-cell">
+                  {p.annualDiscountPercent != null ? (
+                    <span className="text-green-600 font-medium">{p.annualDiscountPercent}% off</span>
+                  ) : (
+                    <span className="text-stone-400">—</span>
+                  )}
+                </td>
                 <td className="table-cell text-xs text-stone-500">
                   <div>M: {p.stripeMonthlyPriceId ?? '—'}</div>
                   <div>A: {p.stripeAnnualPriceId ?? '—'}</div>
@@ -910,7 +1056,7 @@ function PlansTab() {
             ))}
             {plans.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-stone-500">No pricing plans yet.</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-stone-500">No pricing plans yet.</td>
               </tr>
             )}
           </tbody>
