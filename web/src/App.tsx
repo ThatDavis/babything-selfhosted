@@ -21,16 +21,20 @@ export default function App() {
 
   useEffect(() => {
     const init = async () => {
-      const { needed } = await api.auth.setup()
-      setSetupNeeded(needed)
-      if (needed) { setLoading(false); return }
-
       try {
-        const u = await api.auth.me()
-        setUser(u)
-        connectSocket()
+        const { needed } = await api.auth.setup()
+        setSetupNeeded(needed)
+        if (needed) return
+
+        try {
+          const u = await api.auth.me()
+          setUser(u)
+          connectSocket()
+        } catch {
+          setUser(null)
+        }
       } catch {
-        setUser(null)
+        setSetupNeeded(false)
       } finally {
         setLoading(false)
       }
