@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import AffiliateScript from '../components/AffiliateScript'
 
 const AFFILIATE_SIGNUP_URL = import.meta.env.VITE_AFFILIATE_SIGNUP_URL
-const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com/ThatDavis/babything-cloud'
+const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com/ThatDavis/babything-selfhosted'
 const DONATION_URL = import.meta.env.VITE_DONATION_URL
 
 export default function LandingPage() {

@@ -37,7 +37,7 @@ jobs:
               VITE_API_URL=/api/provisioning
               VITE_AFFILIATE_SCRIPT_URL=${{ vars.VITE_AFFILIATE_SCRIPT_URL || '' }}
               VITE_AFFILIATE_SIGNUP_URL=${{ vars.VITE_AFFILIATE_SIGNUP_URL || '' }}
-              VITE_GITHUB_REPO_URL=${{ vars.VITE_GITHUB_REPO_URL || 'https://github.com/ThatDavis/babything-cloud' }}
+              VITE_GITHUB_REPO_URL=${{ vars.VITE_GITHUB_REPO_URL || 'https://github.com/ThatDavis/babything-selfhosted' }}
               VITE_DONATION_URL=${{ vars.VITE_DONATION_URL || '' }}
           - service: provisioning
             context: ./platform/provisioning
