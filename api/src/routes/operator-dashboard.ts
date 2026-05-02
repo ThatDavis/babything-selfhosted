@@ -319,8 +319,24 @@ router.get('/email-templates/:name', requireOperatorAuth, requireOperatorRole('G
   const template = await prisma.emailTemplate.findUnique({
     where: { name: req.params.name },
   })
-  if (!template) { res.status(404).json({ error: 'Template not found' }); return }
-  res.json({ template })
+  if (template) {
+    res.json({ template })
+    return
+  }
+
+  const defaults = defaultEmailTemplates[req.params.name]
+  if (!defaults) { res.status(404).json({ error: 'Template not found' }); return }
+
+  res.json({
+    template: {
+      id: '',
+      name: req.params.name,
+      subject: defaults.subject,
+      htmlBody: defaults.html,
+      createdAt: '',
+      updatedAt: '',
+    },
+  })
 })
 
 const emailTemplateSchema = z.object({

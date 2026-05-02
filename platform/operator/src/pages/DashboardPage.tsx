@@ -558,20 +558,20 @@ function TemplatesTab() {
     fetchTemplates()
   }, [])
 
-  function startEdit(name: string) {
-    const existing = templates.find(t => t.name === name)
-    if (existing) {
-      setEditing(existing)
-      setForm({ name: existing.name, subject: existing.subject, htmlBody: existing.htmlBody })
-    } else {
-      setEditing(null)
-      setForm({ name, subject: '', htmlBody: '' })
-    }
+  async function startEdit(name: string) {
     setError('')
     setMessage('')
     setTestMessage('')
     setTestError('')
     setTestEmail('')
+    try {
+      const { template } = await api.getEmailTemplate(name)
+      setEditing(template.id ? template : null)
+      setForm({ name: template.name, subject: template.subject, htmlBody: template.htmlBody })
+    } catch {
+      setEditing(null)
+      setForm({ name, subject: '', htmlBody: '' })
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
