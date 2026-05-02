@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthContext } from './lib/auth'
 import type { User } from './lib/api'
 import { api } from './lib/api'
@@ -13,6 +13,11 @@ import Setup from './pages/Setup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import AdminSettings from './pages/AdminSettings'
+
+function LoginRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={`/login${search}`} replace />
+}
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -74,7 +79,7 @@ export default function App() {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
               <Route path="/admin" element={user ? <AdminSettings /> : <Navigate to="/login" replace />} />
-              <Route path="/*" element={user ? <Home /> : <Navigate to="/login" replace />} />
+              <Route path="/*" element={user ? <Home /> : <LoginRedirect />} />
             </>
           )}
         </Routes>

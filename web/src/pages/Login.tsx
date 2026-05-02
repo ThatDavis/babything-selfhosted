@@ -20,7 +20,9 @@ export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirectTo = searchParams.get('redirect') ?? '/'
-  const [email, setEmail] = useState('')
+  const prefilledName = searchParams.get('name')
+  const prefilledEmail = searchParams.get('email')
+  const [email, setEmail] = useState(prefilledEmail ?? '')
   const [password, setPassword] = useState('')
   const urlError = searchParams.get('error')
   const [error, setError] = useState(urlError === 'oauth' ? 'Google sign-in failed. Please try again.' : '')
@@ -100,7 +102,13 @@ export default function Login() {
         </form>
 
         <p className="text-center text-sm text-stone-500 mt-6">
-          No account? <Link to={redirectTo !== '/' ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'} className="text-brand-600 font-medium">Create one</Link>
+          No account? <Link to={() => {
+            const p = new URLSearchParams()
+            if (redirectTo !== '/') p.set('redirect', redirectTo)
+            if (prefilledName) p.set('name', prefilledName)
+            if (prefilledEmail) p.set('email', prefilledEmail)
+            return p.toString() ? `/register?${p.toString()}` : '/register'
+          }()} className="text-brand-600 font-medium">Create one</Link>
         </p>
       </div>
     </div>
