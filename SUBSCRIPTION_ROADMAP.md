@@ -89,7 +89,7 @@ DEPLOYMENT_MODE=selfhosted   # or "cloud"
 │                     Your VPS / Server                       │
 │                                                             │
 │  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐   │
-│  │   Traefik   │────►│  Main App   │────►│  Postgres   │   │
+│  │    Nginx    │────►│  Main App   │────►│  Postgres   │   │
 │  │  (reverse)  │     │  (api+web)  │     │  (tenants)  │   │
 │  │   + HTTPS   │     └──────┬──────┘     └─────────────┘   │
 │  └─────────────┘            │                               │
@@ -251,34 +251,34 @@ with a **1-hour grace period** before blocking.
 
 **Goal:** The existing codebase runs in both `selfhosted` and `cloud` modes.
 
-- [ ] **Schema migration**
-  - Add `Tenant` model.
-  - Add `tenantId` to `User`, `Baby`, and all event tables.
-  - Refactor `SystemSettings` to be per-tenant (`tenantId` + relation).
-  - Remove `SmtpConfig` usage in cloud mode (hide UI, skip queries).
-- [ ] **RLS setup**
-  - Add `tenant_id` columns to all tenant-scoped tables.
-  - Create RLS policies: `USING (tenant_id = current_setting('app.current_tenant_id')::text)`.
-  - Build Prisma middleware or transaction wrapper to set `app.current_tenant_id`
+- [x] **Schema migration**
+  - [x] Add `Tenant` model.
+  - [x] Add `tenantId` to `User`, `Baby`, and all event tables.
+  - [x] Refactor `SystemSettings` to be per-tenant (`tenantId` + relation).
+  - [x] Remove `SmtpConfig` usage in cloud mode (hide UI, skip queries).
+- [x] **RLS setup**
+  - [x] Add `tenant_id` columns to all tenant-scoped tables.
+  - [x] Create RLS policies: `USING (tenant_id = current_setting('app.current_tenant_id')::text)`.
+  - [x] Build Prisma middleware or transaction wrapper to set `app.current_tenant_id`
     before each query (required because Prisma + RLS needs explicit session var
     setting).
-- [ ] **Tenant resolution middleware**
-  - Extract subdomain from `Host` header.
-  - Look up tenant status in Redis cache → provisioning service on miss.
-  - Attach `tenantId` to the request context for downstream use.
-  - If tenant is `SUSPENDED`, block write operations (return `402` or `403`).
-- [ ] **Mode switching**
-  - `DEPLOYMENT_MODE=selfhosted`: current behavior preserved.
-  - `DEPLOYMENT_MODE=cloud`: tenant middleware active, per-tenant settings,
+- [x] **Tenant resolution middleware**
+  - [x] Extract subdomain from `Host` header.
+  - [x] Look up tenant status in Redis cache → provisioning service on miss.
+  - [x] Attach `tenantId` to the request context for downstream use.
+  - [x] If tenant is `SUSPENDED`, block write operations (return `402` or `403`).
+- [x] **Mode switching**
+  - [x] `DEPLOYMENT_MODE=selfhosted`: current behavior preserved.
+  - [x] `DEPLOYMENT_MODE=cloud`: tenant middleware active, per-tenant settings,
     no SMTP config, no monitor tab, no developer seed tab.
-- [ ] **Auth updates**
-  - Global email uniqueness (`User.email @unique`).
-  - Registration scoped to tenant (user created with `tenantId`).
-  - First user in a tenant becomes admin (same rule, just tenant-scoped).
-- [ ] **Admin Settings updates for cloud**
-  - Hide Monitor, SMTP, Developer tabs.
-  - Keep General (units, now per-tenant), Users (tenant-scoped).
-  - OAuth tab: hide in cloud (Google is platform-managed).
+- [x] **Auth updates**
+  - [x] Global email uniqueness (`User.email @unique`).
+  - [x] Registration scoped to tenant (user created with `tenantId`).
+  - [x] First user in a tenant becomes admin (same rule, just tenant-scoped).
+- [x] **Admin Settings updates for cloud**
+  - [x] Hide Monitor, SMTP, Developer tabs.
+  - [x] Keep General (units, now per-tenant), Users (tenant-scoped).
+  - [x] OAuth tab: hide in cloud (Google is platform-managed).
 
 **Deliverable:** `DEPLOYMENT_MODE=cloud` boots up, resolves subdomains, and
 enforces tenant isolation via RLS.
@@ -289,27 +289,27 @@ enforces tenant isolation via RLS.
 
 **Goal:** Automated tenant creation and billing lifecycle.
 
-- [ ] **Build provisioning service** (`platform/provisioning/`)
-  - Prisma schema with `Customer` and `TenantSubscription`.
-  - `POST /tenants` — validate subdomain, create customer + subscription
+- [x] **Build provisioning service** (`platform/provisioning/`)
+  - [x] Prisma schema with `Customer` and `TenantSubscription`.
+  - [x] `POST /tenants` — validate subdomain, create customer + subscription
     record, push to main app via `POST /internal/tenants`.
-  - Stripe webhook handlers:
-    - `checkout.session.completed` → activate tenant, push status update.
-    - `invoice.paid` → ensure tenant active.
-    - `invoice.payment_failed` → grace period, then suspend.
-    - `customer.subscription.deleted` → suspend tenant, schedule deletion.
-- [ ] **Main app internal endpoints**
-  - `POST /internal/tenants` — create `Tenant` record.
-  - `PATCH /internal/tenants/:subdomain` — update status.
-  - Protected by `X-Internal-Key`.
-- [ ] **Redis cache integration**
-  - Cache tenant status lookups.
-  - 5-minute TTL, stale-while-revalidate behavior.
-- [ ] **Email automation**
-  - Welcome email on tenant creation.
-  - Trial ending reminder (24h before expiry).
-  - Suspension notice + export instructions.
-  - Deletion warning (7 days before wipe).
+  - [x] Stripe webhook handlers:
+    - [x] `checkout.session.completed` → activate tenant, push status update.
+    - [x] `invoice.paid` → ensure tenant active.
+    - [x] `invoice.payment_failed` → grace period, then suspend.
+    - [x] `customer.subscription.deleted` → suspend tenant, schedule deletion.
+- [x] **Main app internal endpoints**
+  - [x] `POST /internal/tenants` — create `Tenant` record.
+  - [x] `PATCH /internal/tenants/:subdomain` — update status.
+  - [x] Protected by `X-Internal-Key`.
+- [x] **Redis cache integration**
+  - [x] Cache tenant status lookups.
+  - [x] 5-minute TTL, stale-while-revalidate behavior.
+- [x] **Email automation**
+  - [x] Welcome email on tenant creation.
+  - [x] Trial ending reminder (24h before expiry).
+  - [x] Suspension notice + export instructions.
+  - [x] Deletion warning (7 days before wipe).
 
 **Deliverable:** A Stripe Checkout completion automatically spins up a working
 tenant subdomain.
@@ -321,27 +321,27 @@ tenant subdomain.
 **Goal:** Visitors can sign up, start a trial, and manage their subscription
 without touching anything.
 
-- [ ] **Landing page** (`landing/` or `platform/landing/`)
-  - Pricing, features, privacy messaging.
-  - "Start Free Trial" CTA.
-- [ ] **Signup flow**
-  1. User enters email, name, preferred subdomain.
-  2. Provisioning service validates subdomain availability.
-  3. Stripe Checkout session created (trial, no charge today).
-  4. On success, provisioning creates tenant + pushes to main app.
-  5. User receives email with their subdomain link.
-  6. User visits subdomain, completes registration, adds baby.
-- [ ] **Customer dashboard** (`babything.app/account`)
-  - View subscription status, next billing date.
-  - Update payment method (Stripe Customer Portal).
-  - Cancel subscription (triggers suspension + retention timer).
-  - Request data export (JSON bundle).
-  - Delete account (hard delete after confirmation).
-- [ ] **Google OAuth cloud integration**
-  - Platform-managed Google OAuth app.
-  - Sign-in flow from any subdomain.
-  - Signed JWT `state` param encodes tenant subdomain for callback routing.
-  - Callback at `babything.app/api/auth/oauth/google/callback` routes user
+- [x] **Landing page** (`platform/landing/`)
+  - [x] Pricing, features, privacy messaging.
+  - [x] "Start Free Trial" CTA.
+- [x] **Signup flow**
+  1. [x] User enters email, name, preferred subdomain.
+  2. [x] Provisioning service validates subdomain availability.
+  3. [x] Stripe Checkout session created (trial, no charge today).
+  4. [x] On success, provisioning creates tenant + pushes to main app.
+  5. [x] User receives email with their subdomain link.
+  6. [x] User visits subdomain, completes registration, adds baby.
+- [x] **Customer dashboard** (`babything.app/account`)
+  - [x] View subscription status, next billing date.
+  - [x] Update payment method (Stripe Customer Portal).
+  - [x] Cancel subscription (triggers suspension + retention timer).
+  - [x] Request data export (JSON bundle).
+  - [x] Delete account (hard delete after confirmation).
+- [x] **Google OAuth cloud integration**
+  - [x] Platform-managed Google OAuth app.
+  - [x] Sign-in flow from any subdomain.
+  - [x] Signed JWT `state` param encodes tenant subdomain for callback routing.
+  - [x] Callback at `babything.app/api/auth/oauth/google/callback` routes user
     back to their subdomain with session token.
 
 **Deliverable:** Fully automated customer acquisition. Zero manual provisioning.
@@ -353,25 +353,23 @@ without touching anything.
 **Goal:** Self-hosters can move to cloud. The operator can monitor and maintain
 all tenants.
 
-- [ ] **Export format (self-hosted → cloud)**
-  - `POST /admin/export` in self-hosted mode generates a JSON bundle:
+- [x] **Export format (self-hosted → cloud)**
+  - [x] `POST /admin/export` in self-hosted mode generates a JSON bundle:
     - Tenant metadata, users, babies, all events, settings.
-  - Cloud main app accepts `POST /admin/import` with the same bundle,
+  - [x] Cloud main app accepts `POST /admin/import` with the same bundle,
     creating all records under the cloud tenant.
-- [ ] **Import UI**
-  - Cloud Admin Settings → "Import from Self-Hosted" accepts file upload.
-  - Validates and imports. Idempotent (skips existing records by ID).
-- [~] **Operator dashboard** (API complete, UI in progress)
-  - `GET /admin/tenants` returns all tenants with status, trial dates, user/baby counts.
-  - v2: Full UI with operator roles, audit logging, suspend/activate actions.
-  - See `PROGRESS.md` Phase 5 for operator dashboard v2 plan.
-- [ ] **Automated backups**
-  - Nightly `pg_dump` of main app DB to S3-compatible storage.
-  - 30-day retention.
-- [ ] **Rolling updates**
-  - CI/CD builds new `api` + `web` images.
-  - Script pulls new images and restarts cloud containers.
-  - Health check after restart.
+- [x] **Import UI**
+  - [x] Cloud Admin Settings → "Import from Self-Hosted" accepts file upload.
+  - [x] Validates and imports. Idempotent (skips existing records by ID).
+- [x] **Operator dashboard v1** (superseded by v2 in Phase 5)
+  - [x] `GET /admin/tenants` returns all tenants with status, trial dates, user/baby counts.
+- [x] **Automated backups**
+  - [x] Nightly `pg_dump` of main app DB to S3-compatible storage.
+  - [x] 30-day retention.
+- [x] **Rolling updates**
+  - [x] CI/CD builds all service images on push to `main`.
+  - [x] Docker Compose uses GHCR pre-built images with `IMAGE_TAG`.
+  - [x] Health checks on dependent services.
 
 **Deliverable:** A self-hosted family can pack up their data and move to cloud
 in under 5 minutes.
@@ -385,13 +383,14 @@ in under 5 minutes.
   - Security audit of RLS policies and internal endpoints.
 - [x] **Annual plan promotion**
   - ~20% discount to improve cash flow and reduce churn. ✅ Done
-- [x] **Referral program**
-  - "Give a week, get a week" — referrer and referee both get trial extension. ✅ Done
-- [ ] **Operator Dashboard v2** (see PROGRESS.md)
-  - Operator role & permission system
-  - Audit logging
-  - Cross-tenant management UI
-  - Suspend/activate tenants, extend trials
+- [x] ~~**Referral program**~~
+  - ~~"Give a week, get a week" — referrer and referee both get trial extension.~~
+  - **Replaced by discount code system** (see above).
+- [x] **Operator Dashboard v2** (see PROGRESS.md)
+  - [x] Operator role & permission system
+  - [x] Audit logging
+  - [x] Cross-tenant management UI
+  - [x] Suspend/activate tenants, extend trials
 - [ ] **Feature: Monitor v2 for cloud**
   - WebRTC or WebSocket-based camera streaming that works without exposing
     local RTSP to the internet (e.g., a lightweight companion app or WebRTC
@@ -494,14 +493,14 @@ VPS instances and routing subdomains via DNS.
 ## Security Notes
 
 ### Current (v1)
-- Shared API key (`X-Internal-Key`) between provisioning and main app.
+- **mTLS** between provisioning service and main app (replaced shared API key).
 - Redis on Docker internal network with `requirepass`.
 - Provisioning service bound to Docker internal network only.
 - RLS policies prevent cross-tenant data leakage even if a `WHERE` clause is
   forgotten.
 
 ### Future (Phase 5)
-- Migrate internal API auth to **mTLS** (mutual TLS certificates).
+- Security audit of RLS policies and internal endpoints.
 - Regular dependency audits (`npm audit`).
 - Automated security scanning on CI builds.
 
@@ -525,17 +524,17 @@ VPS instances and routing subdomains via DNS.
 
 If you want to launch fast:
 
-- [ ] Register `babything.app`
-- [ ] Stripe account + products
-- [ ] Google Cloud OAuth app (platform-managed)
-- [ ] VPS with Docker + Traefik
-- [ ] Phase 1: schema migration + tenant middleware + RLS
-- [ ] Phase 2: provisioning service + Stripe webhooks
-- [ ] Phase 3: landing page + signup flow
+- [x] Register `babything.app`
+- [x] Stripe account + products
+- [x] Google Cloud OAuth app (platform-managed)
+- [x] Phase 1: schema migration + tenant middleware + RLS
+- [x] Phase 2: provisioning service + Stripe webhooks
+- [x] Phase 3: landing page + signup flow
+- [ ] VPS with Docker + external reverse proxy (nginx)
 - [ ] Privacy Policy + Terms of Service
 - [ ] Launch on Hacker News, Reddit (r/selfhosted, r/parenting), Product Hunt
 
 ---
 
 *Last updated: 2026-05-02*  
-*Status: Phases 1–4 complete. Phase 5 in progress.*
+*Status: Phases 0–4 complete. Phase 5 in progress.*

@@ -16,7 +16,7 @@
 
 Building advanced features and hardening the platform.
 
-**Current feature:** Discount code system
+**Current feature:** Monitor v2 for cloud (WebRTC)
 
 ---
 
@@ -54,7 +54,7 @@ Building advanced features and hardening the platform.
 
 ---
 
-## Phase 4 — Cloud Infrastructure (In Progress)
+## Phase 4 — Cloud Infrastructure ✅ Complete
 
 ### Schema & Multi-Tenancy
 
@@ -89,12 +89,11 @@ Building advanced features and hardening the platform.
 
 - [x] Traefik reverse proxy with wildcard SSL
 - [x] Automated nightly backups (pg_dump to S3)
-- [~] Operator dashboard for monitoring tenants — API exists (`GET /admin/tenants`), UI needed
 - [x] Self-hosted → cloud data migration (JSON bundle import)
 
 ---
 
-## Phase 5 — Growth & Hardening (Planned)
+## Phase 5 — Growth & Hardening (In Progress)
 
 - [x] Replace shared API key with mTLS between services
 - [x] Annual plan promotion
@@ -114,7 +113,7 @@ Building advanced features and hardening the platform.
   - [x] Update .env.example (remove ACME/Traefik vars, add proxy vars)
   - [x] Update DEPLOYMENT.md with new cloud deploy instructions
   - [x] Update REQUIREMENTS.md tech stack
-- [x] Operator Dashboard v2 (cross-tenant management UI) — Implemented on `feature/operator-dashboard`
+- [x] Operator Dashboard v2 (cross-tenant management UI)
   - [x] Operator schema: `Operator` table with roles (`helpdesk`, `accounting`, `global_admin`)
   - [x] Operator auth: separate login/logout, JWT middleware, `requireOperatorAuth`
   - [x] Audit log schema & middleware (`AuditLog` table: operatorId, action, target, oldValue, newValue)
@@ -140,7 +139,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 4/10 | 6 |
+| Phase 5 — Growth | 🔵 In Progress | 9/11 | 2 |
 
 ---
 
