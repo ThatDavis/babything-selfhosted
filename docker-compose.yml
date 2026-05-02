@@ -97,6 +97,15 @@ services:
     depends_on:
       - provisioning
 
+  operator:
+    build:
+      context: ./platform/operator
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks: [frontend]
+    depends_on:
+      - api
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -113,6 +122,7 @@ services:
       - mediamtx
       - provisioning
       - landing
+      - operator
 
 networks:
   frontend:
