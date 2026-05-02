@@ -68,19 +68,21 @@ non-technical friends and family.
 
 ## Architecture Overview
 
-### Single Codebase, Dual Mode
+### Dual-Repo Architecture
 
-The existing `api/` and `web/` support both deployment modes via an environment
-variable:
+Babything is split into two repositories:
 
-```env
-DEPLOYMENT_MODE=selfhosted   # or "cloud"
-```
+- **`babything-cloud`** (this repo) — Multi-tenant SaaS. Cloud-only features:
+  subdomain routing, Stripe billing, operator dashboard, landing page,
+  provisioning service, Resend email, platform-managed Google OAuth.
+- **`babything-selfhosted`** — Free single-tenant self-hosted. Self-hosted-only
+  features: RTSP baby monitor, configurable SMTP, generic OAuth providers.
 
-- **Self-hosted mode:** Behaves exactly as it does today. First registered user
-  becomes admin. Global `SystemSettings`, `SmtpConfig`, `OAuthProvider` tables.
-- **Cloud mode:** Multi-tenant. Subdomain-based tenant resolution. Per-tenant
-  settings. Platform-managed email and OAuth. No monitor tab. No SMTP config UI.
+Shared code (core API routes, frontend pages, Prisma schema) is kept in sync
+via fork-and-merge from `babything-cloud` (upstream) to `babything-selfhosted`.
+
+The `DEPLOYMENT_MODE` environment variable has been removed. Each repo is
+hardcoded to its respective mode at build time.
 
 ### High-Level Cloud Architecture
 

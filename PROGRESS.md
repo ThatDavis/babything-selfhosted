@@ -153,6 +153,11 @@ Building advanced features and hardening the platform.
   - [x] `ACCOUNTING` role has full access (create, update, delete) by default
   - [x] Internal API: `/internal/plans` for provisioning service to read dynamic price IDs
   - [x] Provisioning service fetches Stripe price IDs from plan catalog, falls back to env vars
+- [x] Repo split: cloud vs self-hosted
+  - [x] Harden `babything-cloud` repo — remove self-hosted artifacts, hardcode cloud mode
+  - [x] Create `babything-selfhosted` fork — strip cloud-only code, hardcode self-hosted mode
+  - [x] Fork-and-sync workflow documented with upstream remote
+  - [x] Self-hosted fork gets dedicated GHCR image builds (`babything-selfhosted-api`, `-web`)
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
@@ -166,7 +171,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 13/15 | 2 |
+| Phase 5 — Growth | 🔵 In Progress | 14/16 | 2 |
 
 ---
 
