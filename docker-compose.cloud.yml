@@ -86,6 +86,15 @@ services:
     depends_on:
       - provisioning
 
+  operator:
+    image: ghcr.io/thatdavis/babything-cloud-operator:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [frontend, backend]
+    environment:
+      PORT: 80
+    depends_on:
+      - api
+
   provisioning:
     image: ghcr.io/thatdavis/babything-cloud-provisioning:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -121,6 +130,7 @@ services:
       - web
       - landing
       - provisioning
+      - operator
 
 volumes:
   postgres_data:

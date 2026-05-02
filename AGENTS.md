@@ -1,0 +1,84 @@
+# Agent Instructions — Babything
+
+> Context for AI agents working on the Babything codebase.
+> Human contributors: see `README.md` for setup and contribution guidelines.
+
+---
+
+## Project Overview
+
+Babything is a newborn tracking app for families and caregivers. It supports two deployment modes from a single codebase:
+
+- **Self-hosted** — Free, open-source, runs on your own hardware via Docker
+- **Cloud / SaaS** — Subscription-hosted with Stripe billing, custom subdomains, and automated SSL
+
+Key docs to check before making changes:
+- **`REQUIREMENTS.md`** — Feature specs and user flows
+- **`SUBSCRIPTION_ROADMAP.md`** — Cloud architecture, business model, and long-term roadmap
+- **`PROGRESS.md`** — Current build status, completed phases, what's next
+- **`STANDARDS.md`** — Coding standards and conventions
+- **`DEVELOPMENT.md`** — Git workflow and deployment procedures
+
+---
+
+## Development Workflow
+
+All agents working on this project follow this git discipline. It should be mostly invisible to the user — they should not be interrupted with commit announcements unless they explicitly ask for a status update.
+
+### Silent auto-commits
+- After every 1–3 files changed, or after completing a logical sub-task, stage and commit automatically.
+- Do **not** announce these micro-commits to the user.
+- Use conventional commit format: `type(scope): description` (e.g., `fix(api): correct tenant lookup logic`, `feat(ui): add pricing toggle`).
+- If a remote exists, push the branch after each commit so the PR stays up to date.
+
+### Branching for larger work
+Before starting any feature or refactor, assess size:
+- **Large**: touches >3 files, introduces new API routes, database changes, new pages/components, or is expected to take more than one focused session → create a feature branch first: `git checkout -b feature/short-descriptive-name`
+- **Small**: typo fixes, copy changes, single-file tweaks, or simple config updates → work directly on the current branch
+- When a feature branch is complete, **open a Pull Request** for human review. Never merge directly to `main` locally. Provide a clear PR description covering:
+  - What changed and why
+  - Which files were touched
+  - Any testing performed
+  - Link to relevant plan.md / PROGRESS.md items
+
+### Plan maintenance
+- `PROGRESS.md` must be updated after every work session: mark completed items, add newly discovered tasks, update the `Last updated:` date.
+- If a phase is fully complete, move its items to the `## Completed` section with the completion date.
+- New bugs or requirements discovered during work should be added to the appropriate phase immediately.
+
+---
+
+## How to help
+
+- Always write code that a non-technical person can understand and maintain
+- Prefer simple and working over clever and fragile
+- Make minimal edits — change only the lines that need changing. Use `StrReplaceFile` for surgical edits rather than rewriting whole files
+- Explain tradeoffs in plain English before making significant technical decisions
+- When requirements are ambiguous, check `REQUIREMENTS.md` for the user flow and edge cases
+- Keep `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md` updated as features are completed
+
+---
+
+## Architecture Notes
+
+### Single codebase, dual mode
+The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MODE=selfhosted|cloud`:
+- **Self-hosted**: First registered user becomes admin. Global settings. SMTP + OAuth configurable.
+- **Cloud**: Multi-tenant via subdomain. Per-tenant settings. Platform-managed email and Google OAuth. No monitor tab.
+
+### Service layout
+| Service | Path | Port | Purpose |
+|---------|------|------|---------|
+| Main API | `api/` | 3001 | Users, babies, events, auth, real-time sync |
+| Web app | `web/` | 80 | React frontend (self-hosted + cloud) |
+| Landing | `platform/landing/` | 80 | Marketing site + customer dashboard |
+| Provisioning | `platform/provisioning/` | 3002 | Stripe billing, tenant lifecycle |
+| Nginx | `nginx/` | 80 | Reverse proxy, SSL, subdomain routing |
+
+### Key files for common tasks
+- Tenant resolution: `api/src/middleware/tenant.ts`
+- Auth & JWT: `api/src/middleware/auth.ts`
+- Admin routes: `api/src/routes/admin.ts`
+- Internal API (provisioning ↔ main app): `api/src/routes/internal.ts`
+- Prisma schema: `api/prisma/schema.prisma`
+- Landing API client: `platform/landing/src/lib/api.ts`

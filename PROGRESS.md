@@ -87,7 +87,7 @@ Building advanced features and hardening the platform.
 
 - [x] Traefik reverse proxy with wildcard SSL
 - [x] Automated nightly backups (pg_dump to S3)
-- [x] Operator dashboard for monitoring tenants
+- [~] Operator dashboard for monitoring tenants — API exists (`GET /admin/tenants`), UI needed
 - [x] Self-hosted → cloud data migration (JSON bundle import)
 
 ---
@@ -106,6 +106,17 @@ Building advanced features and hardening the platform.
   - [x] Update .env.example (remove ACME/Traefik vars, add proxy vars)
   - [x] Update DEPLOYMENT.md with new cloud deploy instructions
   - [x] Update REQUIREMENTS.md tech stack
+- [x] Operator Dashboard v2 (cross-tenant management UI) — Implemented on `feature/operator-dashboard`
+  - [x] Operator schema: `Operator` table with roles (`helpdesk`, `accounting`, `global_admin`)
+  - [x] Operator auth: separate login/logout, JWT middleware, `requireOperatorAuth`
+  - [x] Audit log schema & middleware (`AuditLog` table: operatorId, action, target, oldValue, newValue)
+  - [x] Dashboard UI: tenant table with status, trials, user/baby counts
+  - [x] Role-based access control on API routes
+    - `helpdesk`: read-only tenant list & details
+    - `accounting`: extend trials, modify billing status
+    - `global_admin`: all actions + manage operators + view audit logs
+  - [x] Management actions: suspend/activate tenant, extend trial, delete tenant
+  - [~] Security: rate limiting on operator endpoints (via existing authLimiter), optional IP allowlist — TBD
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
@@ -119,7 +130,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 0/6 | 6 |
+| Phase 5 — Growth | 🔵 In Progress | 0/9 | 9 |
 
 ---
 

@@ -23,6 +23,9 @@ import vaccinesRouter from './routes/vaccines.js'
 import statsRouter from './routes/stats.js'
 import reportsRouter from './routes/reports.js'
 import internalRouter from './routes/internal.js'
+import operatorAuthRouter from './routes/operator-auth.js'
+import operatorsRouter from './routes/operators.js'
+import operatorDashboardRouter from './routes/operator-dashboard.js'
 
 // Validate secrets before booting
 function validateSecrets() {
@@ -64,6 +67,11 @@ app.use(express.json({ limit: '100kb' }))
 // Health check runs before tenant resolution so it works even if DB is unreachable
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
+// Operator routes (global, no tenant needed) — mounted BEFORE tenant resolver
+app.use('/operator/auth', operatorAuthRouter)
+app.use('/operator', operatorsRouter)
+app.use('/operator/dashboard', operatorDashboardRouter)
+
 // Tenant resolution middleware (subdomain → tenant, or default tenant in self-hosted)
 app.use(tenantResolver)
 
@@ -81,6 +89,7 @@ app.use('/auth/register', authLimiter)
 app.use('/auth/forgot-password', authLimiter)
 app.use('/auth/reset-password', authLimiter)
 app.use('/auth/oauth/google/start', authLimiter)
+app.use('/operator/auth/login', authLimiter)
 
 app.use('/auth', authRouter)
 app.use('/admin', adminRouter)

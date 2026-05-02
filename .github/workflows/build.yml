@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api, web, landing, provisioning]
+        service: [api, web, landing, provisioning, operator]
         include:
           - service: api
             context: ./api
@@ -43,6 +43,10 @@ jobs:
             context: ./platform/provisioning
             dockerfile: ./platform/provisioning/Dockerfile
             build-args: ""
+          - service: operator
+            context: ./platform/operator
+            dockerfile: ./platform/operator/Dockerfile
+            build-args: |
 
     steps:
       - name: Checkout
