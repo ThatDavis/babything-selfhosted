@@ -425,6 +425,7 @@ model Plan {
   annualPrice          Int      // price in cents
   stripeMonthlyPriceId String?
   stripeAnnualPriceId  String?
+  annualDiscountPercent Int?    // e.g. 20 means 20% off annual vs monthly*12
   features             String[] @default([])
   isActive             Boolean  @default(true)
   sortOrder            Int      @default(0)
