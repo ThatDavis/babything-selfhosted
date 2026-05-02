@@ -406,6 +406,10 @@ in under 5 minutes.
   - Welcome email on registration.
   - Operator dashboard editor for customizing invite, password reset, report, and welcome templates.
   - Falls back to hardcoded defaults when no custom template exists.
+- [x] **Operator section permissions**
+  - Config-driven role mapping for each dashboard section.
+  - Unassigned sections are inaccessible; global_admin bypasses all checks.
+  - Frontend fetches permissions from API and renders tabs dynamically.
 - [ ] **Multi-region**
   - If EU customer base grows, deploy EU VPS with region routing.
 

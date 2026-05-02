@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireOperatorAuth, OperatorAuthRequest } from '../middleware/operator-auth.js'
 import { logOperatorAction } from '../lib/operator-audit.js'
+import { getAccessibleSections } from '../lib/operator-permissions.js'
 
 const router = Router()
 
@@ -73,6 +74,12 @@ router.post('/logout', requireOperatorAuth, async (req, res) => {
   })
 
   res.json({ ok: true })
+})
+
+// ── Get permissions for current operator ───────────────────
+router.get('/permissions', requireOperatorAuth, async (req, res) => {
+  const role = (req as OperatorAuthRequest).operatorRole
+  res.json({ sections: getAccessibleSections(role) })
 })
 
 // ── Get Current Operator ───────────────────────────────────

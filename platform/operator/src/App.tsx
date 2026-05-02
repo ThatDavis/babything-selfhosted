@@ -8,12 +8,14 @@ interface AuthContextType {
   operator: Operator | null
   setOperator: (op: Operator | null) => void
   logout: () => Promise<void>
+  permissions: string[]
 }
 
 export const AuthContext = createContext<AuthContextType>({
   operator: null,
   setOperator: () => {},
   logout: async () => {},
+  permissions: [],
 })
 
 export function useAuth() {
@@ -22,13 +24,21 @@ export function useAuth() {
 
 export default function App() {
   const [operator, setOperator] = useState<Operator | null>(null)
+  const [permissions, setPermissions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
     api.me()
-      .then(data => setOperator(data.operator))
-      .catch(() => setOperator(null))
+      .then(data => {
+        setOperator(data.operator)
+        return api.getPermissions()
+      })
+      .then(p => setPermissions(p.sections))
+      .catch(() => {
+        setOperator(null)
+        setPermissions([])
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -47,7 +57,7 @@ export default function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ operator, setOperator, logout }}>
+    <AuthContext.Provider value={{ operator, setOperator, logout, permissions }}>
       <Routes>
         <Route path="/login" element={operator ? <Navigate to="/" /> : <LoginPage />} />
         <Route path="/*" element={operator ? <DashboardPage /> : <Navigate to="/login" />} />
