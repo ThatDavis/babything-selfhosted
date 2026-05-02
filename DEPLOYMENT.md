@@ -1,20 +1,17 @@
-# Babything — Deployment Guide & Feature Walkthrough
+# Babything Cloud — Deployment Guide
 
 > **Version:** Phase 5 (Growth & Hardening)  
-> **Deployments:** Self-hosted (single-tenant) & Cloud (multi-tenant SaaS)
+> **Deployment:** Cloud (multi-tenant SaaS)
 
 ---
 
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Self-Hosted Deployment](#self-hosted-deployment)
+2. [Build Pipeline](#build-pipeline)
 3. [Cloud Deployment](#cloud-deployment)
 4. [Environment Variables](#environment-variables)
 5. [Feature Walkthrough](#feature-walkthrough)
-   - [End-User Features](#end-user-features)
-   - [Admin Features](#admin-features)
-   - [Operator / SaaS Features](#operator--saas-features)
 6. [Post-Deploy Checklist](#post-deploy-checklist)
 7. [Known Issues & Fixes](#known-issues--fixes)
 
@@ -22,23 +19,13 @@
 
 ## Architecture Overview
 
-Babything is a full-stack baby tracking application with two deployment modes:
+Babything Cloud is a full-stack baby tracking application offered as a multi-tenant SaaS:
 
-### Self-Hosted (Single-Tenant)
-- **Stack:** Docker Compose with 8 services
-- **Entrypoint:** nginx reverse proxy on port 80
-- **Database:** PostgreSQL 16 (app data) + SQLite (provisioning/billing data)
-- **Cache:** Redis 7
-- **Streaming:** MediaMTX (RTSP → HLS baby monitor)
-- **Best for:** Families who want to self-host on their own hardware
-
-### Cloud (Multi-Tenant SaaS)
-- **Stack:** Docker Compose with 7 services (no MediaMTX)
+- **Stack:** Docker Compose with 7 services
 - **Entrypoint:** nginx reverse proxy on port 80 (place behind an external proxy for TLS)
 - **Database:** PostgreSQL 16 + SQLite (provisioning)
 - **Cache:** Redis 7
 - **SSL:** Terminated by external reverse proxy (nginx, Caddy, cloud LB, etc.)
-- **Best for:** Running babything.app as a subscription SaaS
 
 ### Service Map
 
@@ -49,115 +36,16 @@ Babything is a full-stack baby tracking application with two deployment modes:
 └─────────────────┘     └─────────────┘     └──────────────────┘
                               │
                               ├──▶ api:3001  (REST + WebSocket)
-                              ├──▶ mediamtx:8888  (/hls/*)
                               └──▶ landing:80  (marketing site)
 
 api:3001 ──▶ postgres:5432
 api:3001 ──▶ redis:6379
 
 landing:80 ──▶ provisioning:3002
-provisioning:3002 ──▶ api:3001  (internal API, mTLS in cloud)
+provisioning:3002 ──▶ api:3001  (internal API, mTLS)
 ```
 
-Both self-hosted and cloud stacks use the same nginx-based entrypoint. The
-difference is that cloud mode adds subdomain routing (`*.example.com` → tenant
-SPA) and runs behind an external TLS-terminating proxy.
-
----
-
-## Self-Hosted Deployment
-
-### Prerequisites
-
-- Docker & Docker Compose
-- A Linux server or NAS with at least 2GB RAM
-- (Optional) A domain or local DNS entry pointing to your server
-- (Optional) An RTSP-enabled camera for the monitor feature
-
-### Step 1: Clone & Configure
-
-```bash
-git clone https://github.com/ThatDavis/babything-cloud.git
-cd babything-cloud
-cp .env.example .env
-```
-
-Edit `.env` and set the required secrets:
-
-```bash
-# Database
-POSTGRES_USER=babything
-POSTGRES_PASSWORD=$(openssl rand -base64 24)
-POSTGRES_DB=babything
-
-# Auth secrets (min 32 chars)
-JWT_SECRET=$(openssl rand -base64 48)
-INVITE_SECRET=$(openssl rand -base64 48)
-ENCRYPTION_KEY=$(openssl rand -base64 32)
-
-# Internal API key (for provisioning → main app communication)
-INTERNAL_API_KEY=$(openssl rand -base64 48)
-
-# Redis
-REDIS_PASSWORD=$(openssl rand -base64 24)
-
-# App URL (used for OAuth redirects and email links)
-APP_URL=https://babything.local  # or your domain
-
-# Deployment mode
-DEPLOYMENT_MODE=selfhosted
-
-# Camera (optional — for baby monitor)
-# CAMERA_RTSP_URL=rtsp://192.168.1.100:7447/abc123
-```
-
-### Step 2: Build & Start
-
-```bash
-docker compose up -d --build
-```
-
-Services will start in dependency order. The API will automatically run Prisma migrations on boot.
-
-### Step 3: First-Time Setup
-
-Open `http://your-server/` in a browser. You'll see the setup wizard:
-1. Create your admin account
-2. Add your first baby
-3. Start tracking
-
-### Step 4: Enable Optional Features
-
-**Baby Monitor (requires RTSP camera):**
-1. Go to Admin Settings → Monitor
-2. Toggle "Show Monitor tab"
-3. Enter your camera's RTSP URL in `.env` as `CAMERA_RTSP_URL`
-4. Restart the stack: `docker compose up -d`
-
-**Email (SMTP):**
-1. Go to Admin Settings → SMTP Email
-2. Configure your SMTP server (Gmail, Mailgun, etc.)
-3. Send a test email to verify
-
-**Google OAuth:**
-1. Create credentials at https://console.cloud.google.com/apis/credentials
-2. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env`
-3. Restart the stack
-
-**Custom OAuth:**
-1. Go to Admin Settings → OAuth Providers
-2. Add any OpenID Connect provider (Authentik, Keycloak, etc.)
-
-### Step 5: Backups
-
-The `scripts/backup` script performs nightly PostgreSQL dumps to S3:
-
-```bash
-# Configure AWS CLI first: aws configure
-./scripts/backup s3://my-backup-bucket/babything/
-```
-
-Backups older than 30 days are automatically deleted.
+The nginx container handles subdomain routing (`*.example.com` → tenant SPA) and runs behind an external TLS-terminating proxy.
 
 ---
 
@@ -169,6 +57,7 @@ Images are built automatically via GitHub Actions and pushed to GitHub Container
 - `ghcr.io/thatdavis/babything-cloud-web`
 - `ghcr.io/thatdavis/babything-cloud-landing`
 - `ghcr.io/thatdavis/babything-cloud-provisioning`
+- `ghcr.io/thatdavis/babything-cloud-operator`
 
 Tags applied:
 - `latest` — always points to the latest `main` branch build
@@ -263,9 +152,6 @@ ROOT_DOMAIN=example.com
 # App URL (must match the public HTTPS URL)
 APP_URL=https://example.com
 
-# Deployment mode
-DEPLOYMENT_MODE=cloud
-
 # Trust the external reverse proxy so the API sees real client IPs
 TRUSTED_PROXIES=127.0.0.1,10.0.0.0/8
 
@@ -280,8 +166,7 @@ GOOGLE_CLIENT_SECRET=...
 
 ### Step 4: Configure External Reverse Proxy
 
-The cloud stack includes an nginx service that handles subdomain routing and
-path-based proxies. Point your external TLS-terminating proxy to it.
+The cloud stack includes an nginx service that handles subdomain routing and path-based proxies. Point your external TLS-terminating proxy to it.
 
 **Example upstream routes (nginx):**
 
@@ -320,8 +205,7 @@ example.com, *.example.com {
 }
 ```
 
-> The internal nginx container listens on port 80 by default. If you need to
-> change the host port, set `PORT` in `.env` (e.g., `PORT=8080`).
+> The internal nginx container listens on port 80 by default. If you need to change the host port, set `PORT` in `.env` (e.g., `PORT=8080`).
 
 ### Step 5: Pull Images & Start
 
@@ -361,9 +245,9 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 
 - **mTLS:** Internal service communication between provisioning and API uses mutual TLS on port 3003. The shared `INTERNAL_API_KEY` is still accepted as a fallback.
 - **Tenant Isolation:** Each tenant's data is isolated via PostgreSQL RLS policies and `tenantId` filtering in all queries.
-- **No Monitor:** The cloud stack does not include MediaMTX. Monitor v2 (WebRTC) is planned for a future release.
-- **No SMTP:** Email is platform-managed in cloud mode. Per-tenant SMTP configuration is hidden.
-- **No Operator Dashboard:** The previous Traefik dashboard at `operator.{ROOT_DOMAIN}` has been removed. Operator features are available via the API (`/admin/tenants`).
+- **No Monitor:** The cloud stack does not include MediaMTX or camera streaming. Monitor v2 using WebRTC is planned for a future release.
+- **No SMTP UI:** Email is platform-managed in cloud mode. Per-tenant SMTP configuration is hidden.
+- **No Developer Seed Tab:** The seed data feature is not available in cloud mode.
 
 ---
 
@@ -379,7 +263,6 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 | `JWT_SECRET` | JWT signing secret (≥32 chars) | *(random)* |
 | `INVITE_SECRET` | Invite token secret (≥32 chars) | *(random)* |
 | `REDIS_PASSWORD` | Redis AUTH password | *(random)* |
-| `DEPLOYMENT_MODE` | Runtime mode | `selfhosted` or `cloud` |
 | `APP_URL` | Canonical public URL | `https://babything.app` |
 
 ### Required (Cloud Only)
@@ -402,12 +285,11 @@ Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env` and restart
 | `INTERNAL_API_KEY` | Shared secret for service-to-service calls | *(empty)* |
 | `TRUSTED_PROXIES` | Comma-separated proxy IPs or CIDR ranges | *(empty)* |
 | `COOKIE_DOMAIN` | Cookie scope (defaults to `.ROOT_DOMAIN`) | *(auto)* |
-| `CAMERA_RTSP_URL` | RTSP camera URL for monitor | *(empty)* |
 | `VITE_AFFILIATE_SCRIPT_URL` | Affiliate tracking script | *(empty)* |
 | `VITE_AFFILIATE_SIGNUP_URL` | Affiliate signup page | *(empty)* |
 | `IMAGE_TAG` | Image tag to deploy (`latest`, `v1.2.3`, SHA) | `latest` |
 
-### mTLS (Cloud Only, Auto-Configured)
+### mTLS (Auto-Configured)
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
@@ -458,12 +340,6 @@ All logs use mobile-optimized bottom sheet modals:
 - All caregivers see updates instantly when any caregiver logs an event.
 - Events are scoped to baby rooms for efficient broadcasting.
 
-#### Monitor Tab (Self-Hosted Only)
-- HLS.js video player for RTSP camera streams.
-- Video and audio-only modes.
-- Picture-in-Picture support.
-- Auto-retry on connection errors.
-
 #### PWA
 - Installable as a standalone web app on mobile homescreens.
 - Optimized viewport, touch feedback, and tap-highlight removal.
@@ -476,29 +352,13 @@ Accessible at `/admin` by users with `isAdmin = true`.
 #### General Settings
 - Toggle unit system (metric / imperial).
 
-#### Monitor Settings (Self-Hosted Only)
-- Toggle the Monitor tab visibility.
-- View the configured RTSP stream URL.
-
-#### SMTP Email (Self-Hosted Only)
-- Configure outbound email server.
-- Test email sender.
-- Password is encrypted at rest with AES-256-GCM.
-
-#### OAuth Providers (Self-Hosted Only)
-- Add, edit, and delete generic OAuth 2.0 / OpenID Connect providers.
-- Client secrets are encrypted at rest.
-
 #### User Management
 - View all users with baby access mapping.
 - Toggle admin status (with safeguards against deleting the last admin).
 - Delete users.
 - Manually grant/revoke baby access with role selection (Owner / Caregiver).
 
-#### Developer Tools (Dev Mode Only)
-- **Seed Data:** Generate 3 months of realistic demo data for testing.
-
-### Operator / SaaS Features (Cloud Only)
+### Operator / SaaS Features
 
 #### Landing Page
 - Marketing site with feature grid, pricing toggle (monthly/annual), and affiliate partner section.
@@ -533,24 +393,14 @@ Accessible at `/admin` by users with `isAdmin = true`.
 - Affiliate signup link in footer and partner section.
 
 #### Operator Dashboard
-- `GET /admin/tenants` lists all tenants with user and baby counts.
-- Data export/import for tenant migration (self-hosted → cloud).
+- Cross-tenant management UI with role-based access control.
+- Suspend/activate tenants, extend trials, manage discount codes and pricing plans.
+- Audit logging of all operator actions.
+- Email template editor for welcome, invite, password reset, and report emails.
 
 ---
 
 ## Post-Deploy Checklist
-
-### Self-Hosted
-
-- [ ] `.env` secrets are strong and unique
-- [ ] First-time setup wizard completed
-- [ ] SMTP configured and test email sent
-- [ ] (Optional) Google OAuth configured
-- [ ] (Optional) RTSP camera URL configured and monitor working
-- [ ] Backup script scheduled via cron
-- [ ] HTTPS configured (via reverse proxy or nginx TLS)
-
-### Cloud
 
 - [ ] `.env` secrets are strong and unique
 - [ ] DNS A and wildcard records propagated
@@ -572,4 +422,4 @@ Accessible at `/admin` by users with `isAdmin = true`.
 
 **Issue:** The cloud stack does not include MediaMTX or camera streaming.
 
-**Status:** By design. Monitor v2 using WebRTC is planned for a future release. Self-hosted users can use the existing RTSP → HLS monitor.
+**Status:** By design. Monitor v2 using WebRTC is planned for a future release. Self-hosted users can use the existing RTSP → HLS monitor via the [`babything-selfhosted`](https://github.com/ThatDavis/babything-selfhosted) repository.

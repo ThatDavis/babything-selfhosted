@@ -1,7 +1,6 @@
 import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 import { prisma } from './prisma.js'
-import { decryptOptional } from './crypto.js'
 
 // ── Provider 1: Resend (cloud, preferred) ──────────────────
 const resendApiKey = process.env.RESEND_API_KEY
@@ -30,27 +29,11 @@ function getEnvSmtpTransport() {
   })
 }
 
-// ── Provider 3: DB-based SMTP (self-hosted UI config) ──────
-async function getDbSmtpTransport() {
-  const config = await prisma.smtpConfig.findFirst({ where: { enabled: true } })
-  if (!config) return null
-  return nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    auth: { user: config.user, pass: decryptOptional(config.password) },
-  })
-}
-
 async function getSmtpFrom() {
-  // Env-based SMTP sender
   if (process.env.SMTP_FROM_EMAIL) {
     return `"${process.env.SMTP_FROM_NAME ?? 'Babything'}" <${process.env.SMTP_FROM_EMAIL}>`
   }
-  // DB-based SMTP sender
-  const config = await prisma.smtpConfig.findFirst({ where: { enabled: true } })
-  if (!config) return null
-  return `"${config.fromName}" <${config.fromEmail}>`
+  return null
 }
 
 // Simple variable substitution: {{variableName}}
@@ -100,19 +83,6 @@ async function sendEmail(
   const envTransport = getEnvSmtpTransport()
   if (envTransport) {
     await envTransport.sendMail({
-      from: await getSmtpFrom() ?? undefined,
-      to,
-      subject,
-      html,
-      attachments: opts?.attachments,
-    })
-    return
-  }
-
-  // 3. Try DB-based SMTP (self-hosted UI config)
-  const dbTransport = await getDbSmtpTransport()
-  if (dbTransport) {
-    await dbTransport.sendMail({
       from: await getSmtpFrom() ?? undefined,
       to,
       subject,
@@ -333,13 +303,5 @@ export async function sendTestEmail(to: string) {
     return
   }
 
-  const dbTransport = await getDbSmtpTransport()
-  if (!dbTransport) throw new Error('Email not configured')
-  await dbTransport.verify()
-  await dbTransport.sendMail({
-    from: await getSmtpFrom() ?? undefined,
-    to,
-    subject: 'Babything — Email test',
-    text: 'SMTP is configured correctly.',
-  })
+  throw new Error('Email not configured')
 }

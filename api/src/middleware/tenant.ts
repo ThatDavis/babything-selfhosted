@@ -1,26 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
 import { prisma } from '../lib/prisma.js'
-import { isSelfHosted } from '../lib/mode.js'
 import { runWithTenantAsync, type TenantInfo } from '../lib/tenant-context.js'
 import { extractSubdomain } from '../lib/subdomain.js'
 import { getCachedTenant, setCachedTenant } from '../lib/redis.js'
-
-const DEFAULT_TENANT_ID = 'default'
-
-async function resolveDefaultTenant(): Promise<TenantInfo> {
-  let tenant = await prisma.tenant.findUnique({ where: { id: DEFAULT_TENANT_ID } })
-  if (!tenant) {
-    tenant = await prisma.tenant.create({
-      data: {
-        id: DEFAULT_TENANT_ID,
-        subdomain: 'default',
-        status: 'ACTIVE',
-        plan: 'SELFHOSTED',
-      },
-    })
-  }
-  return tenant
-}
 
 export async function tenantResolver(req: Request, res: Response, next: NextFunction) {
   if (req.path === '/health') return next()
@@ -28,11 +10,6 @@ export async function tenantResolver(req: Request, res: Response, next: NextFunc
   if (req.path.startsWith('/auth/oauth/')) return next()
 
   try {
-    if (isSelfHosted()) {
-      const tenant = await resolveDefaultTenant()
-      return runWithTenantAsync({ tenantId: tenant.id, tenant }, next)
-    }
-
     const host = req.headers.host ?? ''
     const subdomain = extractSubdomain(host)
 
