@@ -106,17 +106,17 @@ Building advanced features and hardening the platform.
   - [x] Update .env.example (remove ACME/Traefik vars, add proxy vars)
   - [x] Update DEPLOYMENT.md with new cloud deploy instructions
   - [x] Update REQUIREMENTS.md tech stack
-- [ ] Operator Dashboard v2 (cross-tenant management UI)
-  - [ ] Operator schema: `Operator` table with roles (`helpdesk`, `accounting`, `global_admin`)
-  - [ ] Operator auth: separate login/logout, JWT middleware, `requireOperatorAuth`
-  - [ ] Audit log schema & middleware (`AuditLog` table: operatorId, action, target, oldValue, newValue)
-  - [ ] Dashboard UI: tenant table with status, trials, user/baby counts, MRR
-  - [ ] Role-based access control on API routes
+- [x] Operator Dashboard v2 (cross-tenant management UI) — Implemented on `feature/operator-dashboard`
+  - [x] Operator schema: `Operator` table with roles (`helpdesk`, `accounting`, `global_admin`)
+  - [x] Operator auth: separate login/logout, JWT middleware, `requireOperatorAuth`
+  - [x] Audit log schema & middleware (`AuditLog` table: operatorId, action, target, oldValue, newValue)
+  - [x] Dashboard UI: tenant table with status, trials, user/baby counts
+  - [x] Role-based access control on API routes
     - `helpdesk`: read-only tenant list & details
-    - `accounting`: read billing data, extend trials, modify billing status
+    - `accounting`: extend trials, modify billing status
     - `global_admin`: all actions + manage operators + view audit logs
-  - [ ] Management actions: suspend/activate tenant, extend trial, delete tenant
-  - [ ] Security: rate limiting on operator endpoints, optional IP allowlist
+  - [x] Management actions: suspend/activate tenant, extend trial, delete tenant
+  - [~] Security: rate limiting on operator endpoints (via existing authLimiter), optional IP allowlist — TBD
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
