@@ -401,6 +401,11 @@ in under 5 minutes.
 - [x] **Affiliate program**
   - Mommy bloggers, pediatrician offices, doulas.
   - 20% recurring commission via Rewardful or Tolt. ✅ Done
+- [x] **Email templates**
+  - Database-driven templates with `{{variable}}` substitution.
+  - Welcome email on registration.
+  - Operator dashboard editor for customizing invite, password reset, report, and welcome templates.
+  - Falls back to hardcoded defaults when no custom template exists.
 - [ ] **Multi-region**
   - If EU customer base grows, deploy EU VPS with region routing.
 

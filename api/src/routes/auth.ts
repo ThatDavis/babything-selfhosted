@@ -7,7 +7,7 @@ import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, AuthRequest } from '../middleware/auth.js'
-import { sendInviteEmail, sendPasswordResetEmail } from '../lib/mailer.js'
+import { sendInviteEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../lib/mailer.js'
 import { decryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 import { getTenantId } from '../lib/tenant-context.js'
@@ -141,6 +141,15 @@ router.post('/register', async (req, res) => {
   const token = signToken(user.id)
   res.cookie('session', token, COOKIE_OPTS)
   audit(req, 'register', 'success', { actor: user.id, details: { email: user.email, isAdmin: user.isAdmin } })
+
+  // Send welcome email (best-effort)
+  try {
+    const appUrl = process.env.APP_URL ?? 'http://localhost'
+    await sendWelcomeEmail(user.email, user.name, appUrl)
+  } catch {
+    // Email sending is best-effort
+  }
+
   res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin } })
 })
 

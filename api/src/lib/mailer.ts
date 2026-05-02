@@ -19,58 +19,129 @@ async function getFrom() {
   return `"${config.fromName}" <${config.fromEmail}>`
 }
 
+// Simple variable substitution: {{variableName}}
+function interpolate(template: string, vars: Record<string, string>) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => vars[key] ?? '')
+}
+
+async function renderTemplate(
+  name: string,
+  vars: Record<string, string>
+): Promise<{ subject: string; html: string } | null> {
+  const tpl = await prisma.emailTemplate.findUnique({ where: { name } })
+  if (!tpl) return null
+  return {
+    subject: interpolate(tpl.subject, vars),
+    html: interpolate(tpl.htmlBody, vars),
+  }
+}
+
+async function sendTemplatedEmail(
+  templateName: string,
+  to: string,
+  vars: Record<string, string>,
+  defaults: { subject: string; html: string },
+  opts?: { attachments?: any[]; requireSmtp?: boolean }
+) {
+  const transport = await getTransport()
+  if (!transport) {
+    if (opts?.requireSmtp) throw new Error('SMTP not configured')
+    return
+  }
+
+  const rendered = await renderTemplate(templateName, vars)
+  const subject = rendered?.subject ?? interpolate(defaults.subject, vars)
+  const html = rendered?.html ?? interpolate(defaults.html, vars)
+
+  await transport.sendMail({
+    from: await getFrom() ?? undefined,
+    to,
+    subject,
+    html,
+    attachments: opts?.attachments,
+  })
+}
+
+// ── Welcome email (new registration) ───────────────────────
+export async function sendWelcomeEmail(to: string, name: string, appUrl: string) {
+  await sendTemplatedEmail(
+    'welcome',
+    to,
+    { name, appUrl },
+    {
+      subject: 'Welcome to Babything, {{name}}!',
+      html: `
+        <p>Hi {{name}},</p>
+        <p>Welcome to Babything! Your account has been created successfully.</p>
+        <p><a href="{{appUrl}}" style="background:#ef5144;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Open Babything</a></p>
+        <p>If you have any questions, just reply to this email.</p>
+      `,
+    }
+  )
+}
+
+// ── Invite email ───────────────────────────────────────────
 export async function sendInviteEmail(to: string, babyName: string, inviterName: string, inviteUrl: string) {
-  const transport = await getTransport()
-  if (!transport) return
-  await transport.sendMail({
-    from: await getFrom() ?? undefined,
+  await sendTemplatedEmail(
+    'invite',
     to,
-    subject: `${inviterName} invited you to track ${babyName} on Babything`,
-    html: `
-      <p>Hi there,</p>
-      <p><strong>${inviterName}</strong> has invited you to help track <strong>${babyName}</strong> on Babything.</p>
-      <p><a href="${inviteUrl}" style="background:#ef5144;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Accept invite</a></p>
-      <p>This link expires in 7 days.</p>
-    `,
-  })
+    { babyName, inviterName, inviteUrl },
+    {
+      subject: '{{inviterName}} invited you to track {{babyName}} on Babything',
+      html: `
+        <p>Hi there,</p>
+        <p><strong>{{inviterName}}</strong> has invited you to help track <strong>{{babyName}}</strong> on Babything.</p>
+        <p><a href="{{inviteUrl}}" style="background:#ef5144;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Accept invite</a></p>
+        <p>This link expires in 7 days.</p>
+      `,
+    }
+  )
 }
 
+// ── Password reset email ───────────────────────────────────
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
-  const transport = await getTransport()
-  if (!transport) return
-  await transport.sendMail({
-    from: await getFrom() ?? undefined,
+  await sendTemplatedEmail(
+    'password_reset',
     to,
-    subject: 'Reset your Babything password',
-    html: `
-      <p>Hi ${name},</p>
-      <p>You requested a password reset for your Babything account.</p>
-      <p><a href="${resetUrl}" style="background:#ef5144;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Reset password</a></p>
-      <p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>
-    `,
-  })
+    { name, resetUrl },
+    {
+      subject: 'Reset your Babything password',
+      html: `
+        <p>Hi {{name}},</p>
+        <p>You requested a password reset for your Babything account.</p>
+        <p><a href="{{resetUrl}}" style="background:#ef5144;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Reset password</a></p>
+        <p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+      `,
+    }
+  )
 }
 
+// ── Report email (with PDF attachment) ─────────────────────
 export async function sendReportEmail(to: string, babyName: string, pdfBuffer: Buffer, filename: string) {
-  const transport = await getTransport()
-  if (!transport) throw new Error('SMTP not configured')
-  await transport.sendMail({
-    from: await getFrom() ?? undefined,
+  await sendTemplatedEmail(
+    'report',
     to,
-    subject: `Pediatric Report for ${babyName}`,
-    html: `
-      <p>Hi,</p>
-      <p>Please find attached the pediatric report for <strong>${babyName}</strong>, generated by Babything.</p>
-      <p style="color:#78716c;font-size:12px;">This report was generated at your request and contains health tracking data.</p>
-    `,
-    attachments: [{
-      filename,
-      content: pdfBuffer,
-      contentType: 'application/pdf',
-    }],
-  })
+    { babyName },
+    {
+      subject: 'Pediatric Report for {{babyName}}',
+      html: `
+        <p>Hi,</p>
+        <p>Please find attached the pediatric report for <strong>{{babyName}}</strong>, generated by Babything.</p>
+        <p style="color:#78716c;font-size:12px;">This report was generated at your request and contains health tracking data.</p>
+      `,
+    },
+    {
+      requireSmtp: true,
+      attachments: [{
+        filename,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      }],
+    }
+  )
 }
 
+// ── SMTP test email ────────────────────────────────────────
 export async function sendTestEmail(to: string) {
   const transport = await getTransport()
   if (!transport) throw new Error('SMTP not configured')

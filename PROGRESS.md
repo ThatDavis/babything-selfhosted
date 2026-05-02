@@ -126,6 +126,11 @@ Building advanced features and hardening the platform.
   - [~] Security: rate limiting on operator endpoints (via existing authLimiter), optional IP allowlist — TBD
 - [x] Landing page sign-in: email-to-subdomain lookup + modal + remove footer Account link
 - [x] Fix tenant deletion to clean up provisioning DB (free subdomain + email for reuse)
+- [x] Email templates + welcome email
+  - [x] `EmailTemplate` model with `name`, `subject`, `htmlBody`
+  - [x] Mailer uses DB templates with `{{variable}}` substitution, falls back to hardcoded defaults
+  - [x] Welcome email sent on user registration
+  - [x] Operator dashboard: edit/reset templates for welcome, invite, password reset, report
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
@@ -139,7 +144,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 9/11 | 2 |
+| Phase 5 — Growth | 🔵 In Progress | 10/12 | 2 |
 
 ---
 

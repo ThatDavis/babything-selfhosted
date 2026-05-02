@@ -59,6 +59,15 @@ export interface DiscountCode {
   updatedAt: string
 }
 
+export interface EmailTemplate {
+  id: string
+  name: string
+  subject: string
+  htmlBody: string
+  createdAt: string
+  updatedAt: string
+}
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -133,4 +142,11 @@ export const api = {
     request<{ code: DiscountCode }>('/operator/dashboard/discount-codes', { method: 'POST', body: JSON.stringify(body) }),
   deleteDiscountCode: (id: string) =>
     request<{ ok: boolean }>(`/operator/dashboard/discount-codes/${id}`, { method: 'DELETE' }),
+
+  getEmailTemplates: () => request<{ templates: EmailTemplate[] }>('/operator/dashboard/email-templates'),
+  getEmailTemplate: (name: string) => request<{ template: EmailTemplate }>(`/operator/dashboard/email-templates/${name}`),
+  saveEmailTemplate: (body: { name: string; subject: string; htmlBody: string }) =>
+    request<{ template: EmailTemplate }>('/operator/dashboard/email-templates', { method: 'POST', body: JSON.stringify(body) }),
+  deleteEmailTemplate: (id: string) =>
+    request<{ ok: boolean }>(`/operator/dashboard/email-templates/${id}`, { method: 'DELETE' }),
 }
