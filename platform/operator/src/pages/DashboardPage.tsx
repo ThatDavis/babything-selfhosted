@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../App'
-import { api, Tenant, AuditLog, Operator, Stats, DiscountCode, EmailTemplate } from '../lib/api'
+import { api, Tenant, AuditLog, Operator, Stats, DiscountCode, EmailTemplate, Plan } from '../lib/api'
 
-const ALL_TABS = ['tenants', 'audit', 'operators', 'discounts', 'templates'] as const
+const ALL_TABS = ['tenants', 'audit', 'operators', 'discounts', 'templates', 'plans'] as const
 type Tab = typeof ALL_TABS[number]
 
 export default function DashboardPage() {
@@ -75,6 +75,9 @@ export default function DashboardPage() {
             {permissions.includes('templates') && (
               <TabButton active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>Email Templates</TabButton>
             )}
+            {permissions.includes('plans') && (
+              <TabButton active={activeTab === 'plans'} onClick={() => setActiveTab('plans')}>Pricing</TabButton>
+            )}
           </nav>
         </div>
 
@@ -83,6 +86,7 @@ export default function DashboardPage() {
         {activeTab === 'operators' && <OperatorsTab />}
         {activeTab === 'discounts' && <DiscountsTab />}
         {activeTab === 'templates' && <TemplatesTab />}
+        {activeTab === 'plans' && <PlansTab />}
       </div>
     </div>
   )
@@ -728,6 +732,189 @@ function TemplatesTab() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Plans Tab ──────────────────────────────────────────────
+function PlansTab() {
+  const { operator } = useAuth()
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    monthlyPrice: 800,
+    annualPrice: 7700,
+    stripeMonthlyPriceId: '',
+    stripeAnnualPriceId: '',
+    features: '',
+    isActive: true,
+    sortOrder: 0,
+  })
+  const [error, setError] = useState('')
+
+  const isGlobalAdmin = operator?.role === 'GLOBAL_ADMIN'
+
+  async function fetchPlans() {
+    const d = await api.getPlans()
+    setPlans(d.plans)
+  }
+
+  useEffect(() => {
+    fetchPlans()
+  }, [])
+
+  function startEdit(plan: Plan) {
+    setEditingId(plan.id)
+    setForm({
+      name: plan.name,
+      description: plan.description ?? '',
+      monthlyPrice: plan.monthlyPrice,
+      annualPrice: plan.annualPrice,
+      stripeMonthlyPriceId: plan.stripeMonthlyPriceId ?? '',
+      stripeAnnualPriceId: plan.stripeAnnualPriceId ?? '',
+      features: plan.features.join(', '),
+      isActive: plan.isActive,
+      sortOrder: plan.sortOrder,
+    })
+    setShowForm(true)
+    setError('')
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setForm({
+      name: '',
+      description: '',
+      monthlyPrice: 800,
+      annualPrice: 7700,
+      stripeMonthlyPriceId: '',
+      stripeAnnualPriceId: '',
+      features: '',
+      isActive: true,
+      sortOrder: 0,
+    })
+    setError('')
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    const body: any = {
+      name: form.name,
+      description: form.description || undefined,
+      monthlyPrice: form.monthlyPrice,
+      annualPrice: form.annualPrice,
+      stripeMonthlyPriceId: form.stripeMonthlyPriceId || undefined,
+      stripeAnnualPriceId: form.stripeAnnualPriceId || undefined,
+      features: form.features.split(',').map(f => f.trim()).filter(Boolean),
+      isActive: form.isActive,
+      sortOrder: form.sortOrder,
+    }
+    try {
+      if (editingId) {
+        await api.updatePlan(editingId, body)
+      } else {
+        await api.createPlan(body)
+      }
+      setShowForm(false)
+      resetForm()
+      fetchPlans()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete plan "${name}"? This cannot be undone.`)) return
+    await api.deletePlan(id)
+    fetchPlans()
+  }
+
+  function formatPrice(cents: number) {
+    return `$${(cents / 100).toFixed(2)}`
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Pricing Plans</h2>
+        <button onClick={() => { setShowForm(true); resetForm() }} className="btn-primary">Add Plan</button>
+      </div>
+
+      {showForm && (
+        <div className="card mb-4">
+          <h3 className="font-semibold mb-3">{editingId ? 'Edit Plan' : 'New Plan'}</h3>
+          {error && <div className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input placeholder="Plan name (e.g. Flat Rate)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input" required />
+            <input placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="input" />
+            <input placeholder="Monthly price (cents)" type="number" min={0} value={form.monthlyPrice} onChange={e => setForm(f => ({ ...f, monthlyPrice: parseInt(e.target.value) || 0 }))} className="input" required />
+            <input placeholder="Annual price (cents)" type="number" min={0} value={form.annualPrice} onChange={e => setForm(f => ({ ...f, annualPrice: parseInt(e.target.value) || 0 }))} className="input" required />
+            <input placeholder="Stripe monthly price ID" value={form.stripeMonthlyPriceId} onChange={e => setForm(f => ({ ...f, stripeMonthlyPriceId: e.target.value }))} className="input" />
+            <input placeholder="Stripe annual price ID" value={form.stripeAnnualPriceId} onChange={e => setForm(f => ({ ...f, stripeAnnualPriceId: e.target.value }))} className="input" />
+            <input placeholder="Features (comma-separated)" value={form.features} onChange={e => setForm(f => ({ ...f, features: e.target.value }))} className="input" />
+            <input placeholder="Sort order" type="number" value={form.sortOrder} onChange={e => setForm(f => ({ ...f, sortOrder: parseInt(e.target.value) || 0 }))} className="input" />
+            <label className="flex items-center gap-2 sm:col-span-2">
+              <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
+              <span className="text-sm">Active</span>
+            </label>
+            <div className="sm:col-span-2 flex gap-2">
+              <button type="submit" className="btn-primary">{editingId ? 'Update' : 'Create'}</button>
+              <button type="button" onClick={() => { setShowForm(false); resetForm() }} className="btn-secondary">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
+        <table className="min-w-full divide-y divide-stone-200">
+          <thead className="bg-stone-50">
+            <tr>
+              <th className="table-header">Name</th>
+              <th className="table-header">Monthly</th>
+              <th className="table-header">Annual</th>
+              <th className="table-header">Stripe IDs</th>
+              <th className="table-header">Status</th>
+              <th className="table-header">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-200">
+            {plans.map(p => (
+              <tr key={p.id} className="hover:bg-stone-50">
+                <td className="table-cell">
+                  <div className="font-medium">{p.name}</div>
+                  {p.description && <div className="text-xs text-stone-500">{p.description}</div>}
+                </td>
+                <td className="table-cell">{formatPrice(p.monthlyPrice)}</td>
+                <td className="table-cell">{formatPrice(p.annualPrice)}</td>
+                <td className="table-cell text-xs text-stone-500">
+                  <div>M: {p.stripeMonthlyPriceId ?? '—'}</div>
+                  <div>A: {p.stripeAnnualPriceId ?? '—'}</div>
+                </td>
+                <td className="table-cell">
+                  {p.isActive ? <span className="badge-green">Active</span> : <span className="badge-gray">Inactive</span>}
+                </td>
+                <td className="table-cell">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(p)} className="text-xs text-brand-600 hover:text-brand-700">Edit</button>
+                    {isGlobalAdmin && (
+                      <button onClick={() => handleDelete(p.id, p.name)} className="text-xs text-red-600 hover:text-red-700">Delete</button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {plans.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-stone-500">No pricing plans yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

@@ -158,3 +158,23 @@ export async function useDiscountCode(code: string) {
   }
   return res.json() as Promise<{ ok: boolean }>
 }
+
+export async function getPlanFromMainApp(name: string) {
+  const res = await internalFetch(`${MAIN_APP_URL}/internal/plans/${encodeURIComponent(name)}`, {
+    method: 'GET',
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string }
+    throw new Error(body.error ?? 'Failed to fetch plan')
+  }
+  return res.json() as Promise<{
+    id: string
+    name: string
+    monthlyPrice: number
+    annualPrice: number
+    stripeMonthlyPriceId: string | null
+    stripeAnnualPriceId: string | null
+    features: string[]
+    isActive: boolean
+  }>
+}

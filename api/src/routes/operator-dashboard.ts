@@ -460,6 +460,119 @@ router.post('/email-templates/seed', requireOperatorAuth, requireOperatorRole('G
   res.json({ ok: true })
 })
 
+// ── Plans (accounting+) ────────────────────────────────────
+router.get('/plans', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GLOBAL_ADMIN'), async (_req, res) => {
+  const plans = await prisma.plan.findMany({
+    orderBy: { sortOrder: 'asc' },
+  })
+  res.json({ plans })
+})
+
+const createPlanSchema = z.object({
+  name: z.string().min(1).max(50),
+  description: z.string().max(500).optional(),
+  monthlyPrice: z.number().int().min(0),
+  annualPrice: z.number().int().min(0),
+  stripeMonthlyPriceId: z.string().max(100).optional(),
+  stripeAnnualPriceId: z.string().max(100).optional(),
+  features: z.array(z.string()).default([]),
+  isActive: z.boolean().default(true),
+  sortOrder: z.number().int().default(0),
+})
+
+router.post('/plans', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GLOBAL_ADMIN'), async (req, res) => {
+  const result = createPlanSchema.safeParse(req.body)
+  if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
+
+  const existing = await prisma.plan.findUnique({
+    where: { name: result.data.name },
+  })
+  if (existing) { res.status(409).json({ error: 'Plan name already exists' }); return }
+
+  const plan = await prisma.plan.create({
+    data: {
+      name: result.data.name,
+      description: result.data.description,
+      monthlyPrice: result.data.monthlyPrice,
+      annualPrice: result.data.annualPrice,
+      stripeMonthlyPriceId: result.data.stripeMonthlyPriceId,
+      stripeAnnualPriceId: result.data.stripeAnnualPriceId,
+      features: result.data.features,
+      isActive: result.data.isActive,
+      sortOrder: result.data.sortOrder,
+    },
+  })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'create_plan',
+    targetType: 'plan',
+    targetId: plan.id,
+    newValue: { name: plan.name, monthlyPrice: plan.monthlyPrice, annualPrice: plan.annualPrice },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.status(201).json({ plan })
+})
+
+const updatePlanSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  description: z.string().max(500).optional(),
+  monthlyPrice: z.number().int().min(0).optional(),
+  annualPrice: z.number().int().min(0).optional(),
+  stripeMonthlyPriceId: z.string().max(100).optional(),
+  stripeAnnualPriceId: z.string().max(100).optional(),
+  features: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+})
+
+router.patch('/plans/:id', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GLOBAL_ADMIN'), async (req, res) => {
+  const result = updatePlanSchema.safeParse(req.body)
+  if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
+
+  const plan = await prisma.plan.findUnique({ where: { id: req.params.id } })
+  if (!plan) { res.status(404).json({ error: 'Plan not found' }); return }
+
+  const updated = await prisma.plan.update({
+    where: { id: req.params.id },
+    data: result.data,
+  })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'update_plan',
+    targetType: 'plan',
+    targetId: plan.id,
+    oldValue: { name: plan.name, monthlyPrice: plan.monthlyPrice, annualPrice: plan.annualPrice },
+    newValue: { name: updated.name, monthlyPrice: updated.monthlyPrice, annualPrice: updated.annualPrice },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ plan: updated })
+})
+
+router.delete('/plans/:id', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  const plan = await prisma.plan.findUnique({ where: { id: req.params.id } })
+  if (!plan) { res.status(404).json({ error: 'Plan not found' }); return }
+
+  await prisma.plan.delete({ where: { id: req.params.id } })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'delete_plan',
+    targetType: 'plan',
+    targetId: plan.id,
+    oldValue: { name: plan.name },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ ok: true })
+})
+
 // ── Dashboard stats (helpdesk+) ────────────────────────────
 router.get('/stats', requireOperatorAuth, requireOperatorRole('HELPDESK', 'ACCOUNTING', 'GLOBAL_ADMIN'), async (_req, res) => {
   const [

@@ -391,6 +391,13 @@ in under 5 minutes.
   - [x] Audit logging
   - [x] Cross-tenant management UI
   - [x] Suspend/activate tenants, extend trials
+- [x] **Feature: Operator pricing control**
+  - `Plan` model in main app DB with name, description, monthly/annual prices,
+    Stripe price IDs, features list, and active flag.
+  - Operator dashboard Pricing tab: create, edit, delete plans.
+  - `ACCOUNTING` role has full access by default (create, update, delete).
+  - Provisioning service reads Stripe price IDs from plan catalog via internal API,
+    with graceful fallback to environment variables.
 - [ ] **Feature: Monitor v2 for cloud**
   - WebRTC or WebSocket-based camera streaming that works without exposing
     local RTSP to the internet (e.g., a lightweight companion app or WebRTC
