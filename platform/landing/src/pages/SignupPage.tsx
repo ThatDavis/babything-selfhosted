@@ -60,7 +60,7 @@ export default function SignupPage() {
               🎉 You and {result.referralReward.referrerSubdomain} both got an extra week!
             </p>
           )}
-          <a href={`https://${result.subdomain}.babything.app`} className="btn-primary w-full inline-block">
+          <a href={`https://${result.subdomain}.babything.app?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`} className="btn-primary w-full inline-block">
             Go to your subdomain
           </a>
         </div>
