@@ -29,7 +29,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-bold text-brand-600">Babything Operator</h1>
+              <h1 className="text-lg font-serif text-brand-600">Babything Operator</h1>
               <span className="badge-gray capitalize">{operator?.role.toLowerCase().replace('_', ' ')}</span>
             </div>
             <div className="flex items-center gap-4">

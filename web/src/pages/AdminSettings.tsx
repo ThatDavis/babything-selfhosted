@@ -32,7 +32,7 @@ export default function AdminSettings() {
     <div className="min-h-screen bg-stone-50">
       <header className="bg-white border-b border-stone-100 px-6 py-4 flex items-center gap-4">
         <button onClick={() => navigate('/')} className="text-stone-400 hover:text-stone-600">← Back</button>
-        <h1 className="text-xl font-bold text-brand-600">Admin Settings</h1>
+        <h1 className="text-xl font-serif text-brand-600">Admin Settings</h1>
       </header>
 
       <div className="max-w-3xl mx-auto p-6 space-y-4">

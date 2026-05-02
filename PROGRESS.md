@@ -143,6 +143,10 @@ Building advanced features and hardening the platform.
 - [x] Email template test send
   - [x] API endpoint: `POST /operator/dashboard/email-templates/:name/test`
   - [x] Operator dashboard: test email input + send button in Templates tab
+- [x] Nordic theming refresh
+  - [x] Landing page: serif fonts, emojis, sage palette
+  - [x] Web app: sage brand palette, serif headings
+  - [x] Update chart colors to match new palette
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 

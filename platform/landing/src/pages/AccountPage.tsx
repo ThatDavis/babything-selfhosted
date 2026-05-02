@@ -61,7 +61,7 @@ export default function AccountPage() {
   return (
     <div className="min-h-screen px-6 py-12">
       <div className="max-w-md mx-auto card space-y-6">
-        <h1 className="text-2xl font-bold text-stone-800">Account</h1>
+        <h1 className="text-2xl font-serif text-stone-800">Account</h1>
         <div className="space-y-2 text-sm">
           <p><span className="text-stone-500">Subdomain:</span> <strong>{subdomain}.babything.app</strong></p>
           <p><span className="text-stone-500">Status:</span> <span className={`font-semibold ${tenant?.status === 'ACTIVE' ? 'text-green-600' : tenant?.status === 'SUSPENDED' ? 'text-red-500' : 'text-amber-500'}`}>{tenant?.status}</span></p>

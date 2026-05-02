@@ -27,7 +27,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-stone-100 px-4">
       <div className="card w-full max-w-sm">
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-brand-600">Babything</h1>
+          <h1 className="text-xl font-serif text-brand-600">Babything</h1>
           <p className="text-sm text-stone-500 mt-1">Operator Dashboard</p>
         </div>
 

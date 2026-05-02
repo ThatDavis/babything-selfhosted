@@ -130,7 +130,7 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-6">
         <div className="text-center">
-          <p className="text-2xl font-bold mb-2">Welcome, {user?.name}!</p>
+          <p className="text-2xl font-serif mb-2">Welcome, {user?.name}!</p>
           <p className="text-stone-500">Add your first baby to get started.</p>
         </div>
         <button className="btn-primary" onClick={() => setShowAddBaby(true)}>Add baby</button>
@@ -149,7 +149,7 @@ export default function Home() {
     <div className="min-h-screen flex">
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex flex-col w-56 bg-white border-r border-stone-100 p-4 shrink-0">
-        <h1 className="text-xl font-bold text-brand-600 mb-6">babything</h1>
+        <h1 className="text-xl font-serif text-brand-600 mb-6">babything</h1>
 
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">Babies</p>
         <div className="space-y-1 mb-6">
@@ -217,7 +217,7 @@ export default function Home() {
         {/* Desktop header */}
         {activeBaby && (
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-white">
-            <h2 className="text-xl font-bold">{activeBaby.name} <span className="text-stone-400 font-normal text-base">— {NAV.find(n => n.id === tab)?.label}</span></h2>
+            <h2 className="text-xl font-serif">{activeBaby.name} <span className="text-stone-400 font-normal text-base font-sans">— {NAV.find(n => n.id === tab)?.label}</span></h2>
             <button onClick={() => setShowSettings(true)} className="btn-ghost text-sm text-stone-500">⚙ Settings</button>
           </div>
         )}

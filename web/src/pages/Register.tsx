@@ -48,7 +48,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-brand-50 to-stone-50">
       <div className="w-full max-w-sm">
-        <h1 className="text-3xl font-bold text-center mb-2 text-brand-600">babything</h1>
+        <h1 className="text-3xl font-serif text-center mb-2 text-brand-600">babything</h1>
         <p className="text-center text-stone-500 mb-8">Create your account</p>
 
         {googleEnabled && (

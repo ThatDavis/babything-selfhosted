@@ -74,7 +74,7 @@ export default function DashboardCharts({ babyId }: Props) {
                 <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={3} />
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#f87c72" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#6f9682" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
         }
@@ -89,7 +89,7 @@ export default function DashboardCharts({ babyId }: Props) {
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#7daea8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
         }
@@ -104,7 +104,7 @@ export default function DashboardCharts({ babyId }: Props) {
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(v: number) => [`${v}h`, 'Sleep']} />
-                <Bar dataKey="hours" fill="#818cf8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="hours" fill="#8a9ab0" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
         }
@@ -118,7 +118,7 @@ export default function DashboardCharts({ babyId }: Props) {
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
               <Tooltip formatter={(v: number) => [displayWeight(unitSystem === 'imperial' ? v * 453.592 : v * 1000, unitSystem), 'Weight']} />
-              <Line type="monotone" dataKey={weightUnit} stroke="#f87c72" strokeWidth={2} dot={{ r: 4, fill: '#f87c72' }} />
+              <Line type="monotone" dataKey={weightUnit} stroke="#6f9682" strokeWidth={2} dot={{ r: 4, fill: '#6f9682' }} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>

@@ -60,7 +60,7 @@ export default function Setup() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-brand-50 to-stone-50">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <h1 className="text-3xl font-bold text-center mb-1 text-brand-600">babything</h1>
+        <h1 className="text-3xl font-serif text-center mb-1 text-brand-600">babything</h1>
         <p className="text-center text-stone-500 mb-8 text-sm">First-time setup</p>
 
         {/* Step indicators */}
@@ -80,7 +80,7 @@ export default function Setup() {
         {step === 'account' && (
           <form onSubmit={createAccount} className="card space-y-4">
             <div>
-              <h2 className="text-lg font-bold mb-1">Create your account</h2>
+              <h2 className="text-lg font-serif mb-1">Create your account</h2>
               <p className="text-sm text-stone-500">You'll be the owner and can invite caregivers later.</p>
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -105,7 +105,7 @@ export default function Setup() {
         {step === 'baby' && (
           <form onSubmit={createBaby} className="card space-y-4">
             <div>
-              <h2 className="text-lg font-bold mb-1">Add your baby</h2>
+              <h2 className="text-lg font-serif mb-1">Add your baby</h2>
               <p className="text-sm text-stone-500">You can add more babies and caregivers from the app.</p>
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -135,7 +135,7 @@ export default function Setup() {
         {step === 'done' && (
           <div className="card text-center space-y-4">
             <div className="text-5xl">🎉</div>
-            <h2 className="text-xl font-bold">You're all set!</h2>
+            <h2 className="text-xl font-serif">You're all set!</h2>
             <p className="text-stone-500 text-sm">
               Start logging feedings, diapers, and sleep. Invite your partner from the settings menu once you're in.
             </p>

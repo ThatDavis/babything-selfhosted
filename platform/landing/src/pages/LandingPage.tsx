@@ -36,7 +36,7 @@ export default function LandingPage() {
 
       <header className="bg-white border-b border-stone-100">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-brand-600">Babything</h1>
+          <h1 className="text-xl font-serif text-brand-600">Babything</h1>
           <div className="flex items-center gap-3">
             <button onClick={() => setShowSignIn(true)} className="btn-ghost text-sm">Sign in</button>
             <button onClick={() => navigate('/signup')} className="btn-primary text-sm">Start free trial</button>
@@ -46,7 +46,8 @@ export default function LandingPage() {
 
       <main className="flex-1 max-w-5xl mx-auto px-6 py-16 space-y-16">
         <section className="text-center space-y-6">
-          <h2 className="text-4xl font-bold text-stone-800">Track everything about your baby.</h2>
+          <div className="text-5xl mb-2">🌿</div>
+          <h2 className="text-4xl font-serif text-stone-800">Track everything about your baby.</h2>
           <p className="text-lg text-stone-500 max-w-2xl mx-auto">
             Feedings, diapers, sleep, growth, vaccines, medications, and milestones — all in one place.
             Share with caregivers in real time.
@@ -58,14 +59,15 @@ export default function LandingPage() {
 
         <section className="grid md:grid-cols-3 gap-6">
           {[
-            { title: 'Real-time sync', desc: 'All caregivers see updates instantly.' },
-            { title: 'PDF reports', desc: 'Branded summaries for pediatrician visits.' },
-            { title: 'CSV export', desc: 'Download all your data at any time.' },
-            { title: 'Vaccine tracking', desc: 'CDC schedule with due/overdue status.' },
-            { title: 'Privacy first', desc: 'Your data stays on your subdomain, isolated.' },
-            { title: 'PWA ready', desc: 'Install on your phone like a native app.' },
+            { icon: '⚡', title: 'Real-time sync', desc: 'All caregivers see updates instantly.' },
+            { icon: '📄', title: 'PDF reports', desc: 'Branded summaries for pediatrician visits.' },
+            { icon: '📥', title: 'CSV export', desc: 'Download all your data at any time.' },
+            { icon: '💉', title: 'Vaccine tracking', desc: 'CDC schedule with due/overdue status.' },
+            { icon: '🔒', title: 'Privacy first', desc: 'Your data stays on your subdomain, isolated.' },
+            { icon: '📱', title: 'PWA ready', desc: 'Install on your phone like a native app.' },
           ].map(f => (
             <div key={f.title} className="card">
+              <div className="text-2xl mb-2">{f.icon}</div>
               <h3 className="font-semibold text-stone-700">{f.title}</h3>
               <p className="text-sm text-stone-500 mt-1">{f.desc}</p>
             </div>
@@ -73,10 +75,11 @@ export default function LandingPage() {
         </section>
 
         <section className="text-center space-y-6">
-          <h2 className="text-3xl font-bold text-stone-800">Simple pricing</h2>
+          <h2 className="text-3xl font-serif text-stone-800">Simple pricing</h2>
           <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
             {/* Cloud */}
             <div className="card">
+              <div className="text-2xl mb-2">☁️</div>
               <h3 className="font-semibold text-stone-700 mb-2">Cloud</h3>
               <div className="flex items-center justify-center gap-3 mb-4">
                 <span className={`text-sm font-medium ${!annual ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
@@ -94,12 +97,12 @@ export default function LandingPage() {
 
               {annual ? (
                 <>
-                  <p className="text-4xl font-bold text-brand-600">$77<span className="text-lg text-stone-500 font-normal">/yr</span></p>
+                  <p className="text-4xl font-serif text-brand-600">$77<span className="text-lg text-stone-500 font-normal">/yr</span></p>
                   <p className="text-sm text-green-600 mt-1 font-medium">~20% savings vs monthly</p>
                 </>
               ) : (
                 <>
-                  <p className="text-4xl font-bold text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
+                  <p className="text-4xl font-serif text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
                   <p className="text-sm text-stone-500 mt-1">or $77/yr (~20% savings)</p>
                 </>
               )}
@@ -118,8 +121,9 @@ export default function LandingPage() {
 
             {/* Self-hosted */}
             <div className="card">
+              <div className="text-2xl mb-2">🏠</div>
               <h3 className="font-semibold text-stone-700 mb-2">Self-hosted</h3>
-              <p className="text-4xl font-bold text-brand-600">Free</p>
+              <p className="text-4xl font-serif text-brand-600">Free</p>
               <p className="text-sm text-stone-500 mt-1">Run on your own hardware</p>
 
               <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
@@ -144,7 +148,7 @@ export default function LandingPage() {
                   rel="noopener noreferrer"
                   className="text-sm text-brand-600 hover:text-brand-700 mt-3 inline-block"
                 >
-                  Support the project ❤
+                  Support the project 🌱
                 </a>
               )}
             </div>
@@ -153,7 +157,7 @@ export default function LandingPage() {
 
         {AFFILIATE_SIGNUP_URL && (
           <section className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-stone-800">Partner with us</h2>
+            <h2 className="text-2xl font-serif text-stone-800">Partner with us</h2>
             <p className="text-stone-500 max-w-xl mx-auto">
               Are you a blogger, pediatrician, or doula? Earn 20% recurring commission for every family you refer to Babything.
             </p>
@@ -181,7 +185,7 @@ export default function LandingPage() {
       {showSignIn && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-6 z-50" onClick={() => setShowSignIn(false)}>
           <div className="card max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-stone-800">Sign in</h3>
+            <h3 className="text-xl font-serif text-stone-800">Sign in</h3>
             <p className="text-sm text-stone-500 mt-1">Enter your email and we'll send you to your subdomain.</p>
             {signInError && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg mt-3">{signInError}</p>}
             <form onSubmit={handleSignIn} className="mt-4 space-y-3">

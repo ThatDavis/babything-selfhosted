@@ -59,7 +59,7 @@ export default function SignupPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="card max-w-md w-full text-center space-y-4">
-          <h2 className="text-2xl font-bold text-stone-800">You're all set!</h2>
+          <h2 className="text-2xl font-serif text-stone-800">You're all set!</h2>
           <p className="text-stone-600">
             Your family subdomain is <strong className="text-brand-600">{result.subdomain}.babything.app</strong>
           </p>
