@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../lib/api'
 import AffiliateScript from '../components/AffiliateScript'
 
 const AFFILIATE_SIGNUP_URL = import.meta.env.VITE_AFFILIATE_SIGNUP_URL
@@ -10,6 +11,25 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [annual, setAnnual] = useState(false)
 
+  const [showSignIn, setShowSignIn] = useState(false)
+  const [signInEmail, setSignInEmail] = useState('')
+  const [signInLoading, setSignInLoading] = useState(false)
+  const [signInError, setSignInError] = useState('')
+
+  async function handleSignIn(e: FormEvent) {
+    e.preventDefault()
+    setSignInLoading(true)
+    setSignInError('')
+    try {
+      const { subdomain } = await api.lookupTenant({ email: signInEmail })
+      window.location.href = `https://${subdomain}.babything.app/login?email=${encodeURIComponent(signInEmail)}`
+    } catch (err) {
+      setSignInError(err instanceof Error ? err.message : 'Failed to find account')
+    } finally {
+      setSignInLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <AffiliateScript />
@@ -17,7 +37,10 @@ export default function LandingPage() {
       <header className="bg-white border-b border-stone-100">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-brand-600">Babything</h1>
-          <button onClick={() => navigate('/signup')} className="btn-primary text-sm">Start free trial</button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowSignIn(true)} className="btn-ghost text-sm">Sign in</button>
+            <button onClick={() => navigate('/signup')} className="btn-primary text-sm">Start free trial</button>
+          </div>
         </div>
       </header>
 
@@ -150,10 +173,36 @@ export default function LandingPage() {
                 Affiliates
               </a>
             )}
-            <a href="/account" className="hover:text-stone-600 transition-colors">Account</a>
           </div>
         </div>
       </footer>
+
+      {/* Sign-in modal */}
+      {showSignIn && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-6 z-50" onClick={() => setShowSignIn(false)}>
+          <div className="card max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-stone-800">Sign in</h3>
+            <p className="text-sm text-stone-500 mt-1">Enter your email and we'll send you to your subdomain.</p>
+            {signInError && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg mt-3">{signInError}</p>}
+            <form onSubmit={handleSignIn} className="mt-4 space-y-3">
+              <input
+                type="email"
+                className="input"
+                placeholder="you@example.com"
+                value={signInEmail}
+                onChange={e => setSignInEmail(e.target.value)}
+                required
+              />
+              <button type="submit" disabled={signInLoading} className="btn-primary w-full">
+                {signInLoading ? 'Looking up…' : 'Continue'}
+              </button>
+              <button type="button" onClick={() => setShowSignIn(false)} className="btn-ghost w-full text-sm">
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

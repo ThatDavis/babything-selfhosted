@@ -22,6 +22,10 @@ const createSchema = z.object({
   discountCode: z.string().optional(),
 })
 
+const lookupSchema = z.object({
+  email: z.string().email(),
+})
+
 const bypassStripe = process.env.STRIPE_BYPASS === 'true'
 
 function getStripePriceId(billingPeriod: string): string {
@@ -175,6 +179,26 @@ router.post('/', async (req, res) => {
       ? { type: discount.type, value: discount.value, code: discount.code }
       : null,
   })
+})
+
+router.post('/lookup', async (req, res) => {
+  const result = lookupSchema.safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({ error: result.error.flatten() })
+    return
+  }
+
+  const customer = await prisma.customer.findUnique({
+    where: { email: result.data.email },
+    include: { tenants: true },
+  })
+
+  if (!customer || customer.tenants.length === 0) {
+    res.status(404).json({ error: 'No account found with that email' })
+    return
+  }
+
+  res.json({ subdomain: customer.tenants[0].subdomain })
 })
 
 router.get('/:subdomain', async (req, res) => {

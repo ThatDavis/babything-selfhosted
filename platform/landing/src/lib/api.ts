@@ -18,6 +18,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   provision: (body: { email: string; name: string; subdomain: string; billingPeriod: 'MONTHLY' | 'ANNUAL'; discountCode?: string }) =>
     request<{ tenant: { subdomain: string; status: string }; trialEndsAt: string; discount: { type: string; value: number; code: string } | null }>('/tenants', { method: 'POST', body: JSON.stringify(body) }),
+  lookupTenant: (body: { email: string }) =>
+    request<{ subdomain: string }>('/tenants/lookup', { method: 'POST', body: JSON.stringify(body) }),
   tenantStatus: (subdomain: string) =>
     request<{ subdomain: string; status: string; trialEndsAt: string | null; stripeSubscriptionId: string | null; billingPeriod: string | null }>(`/tenants/${subdomain}`),
   portalSession: (subdomain: string) =>
