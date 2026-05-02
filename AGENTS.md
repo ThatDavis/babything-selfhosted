@@ -75,6 +75,19 @@ The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MOD
 | Provisioning | `platform/provisioning/` | 3002 | Stripe billing, tenant lifecycle |
 | Nginx | `nginx/` | 80 | Reverse proxy, SSL, subdomain routing |
 
+### Email templates
+All transactional emails are driven by the `EmailTemplate` table (`api/prisma/schema.prisma`).
+
+- **Template names:** `welcome`, `invite`, `password_reset`, `report`
+- **Variable syntax:** `{{variableName}}` — plain string substitution in `api/src/lib/mailer.ts`
+- **Fallback behavior:** If no custom template exists in the DB, the mailer falls back to hardcoded defaults
+- **Operator editing:** Global admins can edit templates via the **Email Templates** tab in the operator dashboard (`platform/operator/src/pages/DashboardPage.tsx`)
+- **Adding a new email type:**
+  1. Add a `sendXEmail` function in `api/src/lib/mailer.ts` using `sendTemplatedEmail`
+  2. Add the template name + variables to the built-in list in `TemplatesTab`
+  3. Add a default template in the fallback object
+  4. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`
+
 ### Key files for common tasks
 - Tenant resolution: `api/src/middleware/tenant.ts`
 - Auth & JWT: `api/src/middleware/auth.ts`
@@ -82,3 +95,4 @@ The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MOD
 - Internal API (provisioning ↔ main app): `api/src/routes/internal.ts`
 - Prisma schema: `api/prisma/schema.prisma`
 - Landing API client: `platform/landing/src/lib/api.ts`
+- Email sending & templates: `api/src/lib/mailer.ts`

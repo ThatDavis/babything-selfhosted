@@ -28,17 +28,20 @@ Keep questions minimal — don't over-interrogate.
 
 ## Step 2 — Check for conflicts or dependencies
 
-Read `plan.md` and `requirements.md`. Confirm:
+Read `REQUIREMENTS.md`, `PROGRESS.md`, and `SUBSCRIPTION_ROADMAP.md`. Confirm:
 - This feature doesn't contradict existing requirements
 - Any prerequisites are already complete (if not, flag them)
+- If the feature touches cloud architecture, billing, or tenant lifecycle, also check `SUBSCRIPTION_ROADMAP.md` for conflicts
 
-## Step 3 — Update `plan.md`
+## Step 3 — Update progress documents
 
-Add the new feature to the most appropriate phase in `plan.md`. Break it into 2–4 sub-tasks if it's complex. Update the `Last updated:` date and add a note to `## Notes` about why this was added.
+Add the new feature to the most appropriate phase in **`PROGRESS.md`**. Break it into 2–4 sub-tasks if it's complex. Update the `Last updated:` date.
 
-Example sub-tasks format:
+If the feature involves cloud infrastructure, billing, tenant lifecycle, or the subscription model, also add or update it in **`SUBSCRIPTION_ROADMAP.md`** under the relevant phase.
+
+Example sub-tasks format in `PROGRESS.md`:
 ```
-## Phase 2 — Core Features
+## Phase 5 — Growth & Hardening (In Progress)
 - [ ] [New feature name]
   - [ ] Sub-task 1
   - [ ] Sub-task 2
@@ -54,12 +57,13 @@ Build the feature now, following these principles:
 - If a UI is involved, verify it visually before finishing
 - **Commit silently and incrementally** — after each significant sub-task or logical chunk of work, stage and commit automatically per the `Development Workflow` in `AGENTS.md`. Do not announce these micro-commits to the user.
 
-## Step 5 — Update plan and save
+## Step 5 — Update progress and save
 
-1. Run `/update-plan` logic: mark the new feature's sub-tasks complete as they are done.
-2. Run `/save-progress` logic: commit any remaining uncommitted changes with a clear message. This is the user-visible checkpoint.
+1. Mark the new feature's sub-tasks complete in **`PROGRESS.md`** as they are done. Update the `Last updated:` date.
+2. If the feature touches cloud architecture, billing, or subscription mechanics, update **`SUBSCRIPTION_ROADMAP.md`** to reflect the new status. Keep the two docs consistent with each other.
+3. Run `/save-progress` logic: commit any remaining uncommitted changes with a clear message. This is the user-visible checkpoint.
    - If you already committed incrementally during Step 4, this may just be a small final commit or nothing at all.
-3. If a feature branch was created in Step 0, push it to the remote and **open a Pull Request** for human review. Do not merge locally.
+4. If a feature branch was created in Step 0, push it to the remote and **open a Pull Request** for human review. Do not merge locally.
    - PR title: same as the feature name or final commit message
    - PR description: summarize what changed, why, which files were touched, and any testing done
    - Provide the user with the branch name and a link (or instructions) to open the PR in their git web interface

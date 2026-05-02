@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../App'
-import { api, Tenant, AuditLog, Operator, Stats, DiscountCode } from '../lib/api'
+import { api, Tenant, AuditLog, Operator, Stats, DiscountCode, EmailTemplate } from '../lib/api'
 
-type Tab = 'tenants' | 'audit' | 'operators' | 'discounts'
+type Tab = 'tenants' | 'audit' | 'operators' | 'discounts' | 'templates'
 
 export default function DashboardPage() {
   const { operator, logout } = useAuth()
@@ -59,6 +59,9 @@ export default function DashboardPage() {
             {(operator?.role === 'GLOBAL_ADMIN' || operator?.role === 'ACCOUNTING') && (
               <TabButton active={activeTab === 'discounts'} onClick={() => setActiveTab('discounts')}>Discount Codes</TabButton>
             )}
+            {operator?.role === 'GLOBAL_ADMIN' && (
+              <TabButton active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>Email Templates</TabButton>
+            )}
           </nav>
         </div>
 
@@ -66,6 +69,7 @@ export default function DashboardPage() {
         {activeTab === 'audit' && <AuditTab />}
         {activeTab === 'operators' && <OperatorsTab />}
         {activeTab === 'discounts' && <DiscountsTab />}
+        {activeTab === 'templates' && <TemplatesTab />}
       </div>
     </div>
   )
@@ -508,6 +512,145 @@ function AuditTab() {
           <span className="text-sm text-stone-500">Page {page} of {totalPages}</span>
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="btn-secondary text-xs">Next</button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Email Templates Tab ────────────────────────────────────
+function TemplatesTab() {
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [editing, setEditing] = useState<EmailTemplate | null>(null)
+  const [form, setForm] = useState({ name: '', subject: '', htmlBody: '' })
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  const builtInTemplates = [
+    { name: 'welcome', label: 'Welcome (registration)', vars: 'name, appUrl' },
+    { name: 'invite', label: 'Invite caregiver', vars: 'inviterName, babyName, inviteUrl' },
+    { name: 'password_reset', label: 'Password reset', vars: 'name, resetUrl' },
+    { name: 'report', label: 'PDF report', vars: 'babyName' },
+  ]
+
+  async function fetchTemplates() {
+    const d = await api.getEmailTemplates()
+    setTemplates(d.templates)
+  }
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [])
+
+  function startEdit(name: string) {
+    const existing = templates.find(t => t.name === name)
+    if (existing) {
+      setEditing(existing)
+      setForm({ name: existing.name, subject: existing.subject, htmlBody: existing.htmlBody })
+    } else {
+      setEditing(null)
+      setForm({ name, subject: '', htmlBody: '' })
+    }
+    setError('')
+    setMessage('')
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setMessage('')
+    try {
+      await api.saveEmailTemplate(form)
+      setMessage('Template saved.')
+      fetchTemplates()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete custom template for "${name}"? The default template will be used instead.`)) return
+    await api.deleteEmailTemplate(id)
+    fetchTemplates()
+    if (editing?.id === id) {
+      setEditing(null)
+      setForm({ name: '', subject: '', htmlBody: '' })
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Email Templates</h2>
+      </div>
+
+      {message && <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{message}</div>}
+      {error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Template list */}
+        <div className="card">
+          <h3 className="font-semibold mb-3">Available Templates</h3>
+          <div className="space-y-2">
+            {builtInTemplates.map(bt => {
+              const custom = templates.find(t => t.name === bt.name)
+              return (
+                <div key={bt.name} className={`flex items-center justify-between p-3 rounded-lg border ${custom ? 'border-brand-200 bg-brand-50' : 'border-stone-200 bg-white'}`}>
+                  <div>
+                    <p className="font-medium text-sm">{bt.label}</p>
+                    <p className="text-xs text-stone-500">Variables: {bt.vars}</p>
+                    {custom && <span className="text-xs text-brand-600 font-medium">Customized</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(bt.name)} className="btn-secondary text-xs">
+                      {custom ? 'Edit' : 'Customize'}
+                    </button>
+                    {custom && (
+                      <button onClick={() => handleDelete(custom.id, bt.name)} className="text-xs text-red-600 hover:text-red-700">Reset</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-xs text-stone-500 mt-4">
+            Use <code className="bg-stone-100 px-1 rounded">{'{{variableName}}'}</code> syntax to insert dynamic values.
+            If no custom template exists, the hardcoded default is used.
+          </p>
+        </div>
+
+        {/* Editor */}
+        {form.name && (
+          <div className="card">
+            <h3 className="font-semibold mb-3">
+              {editing ? 'Edit' : 'Customize'} {builtInTemplates.find(b => b.name === form.name)?.label ?? form.name}
+            </h3>
+            <form onSubmit={handleSave} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Subject</label>
+                <input
+                  value={form.subject}
+                  onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">HTML Body</label>
+                <textarea
+                  value={form.htmlBody}
+                  onChange={e => setForm(f => ({ ...f, htmlBody: e.target.value }))}
+                  className="input font-mono text-sm"
+                  rows={12}
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" className="btn-primary">Save Template</button>
+                <button type="button" onClick={() => { setEditing(null); setForm({ name: '', subject: '', htmlBody: '' }); setError(''); setMessage('') }} className="btn-secondary">Cancel</button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -306,6 +306,78 @@ router.delete('/discount-codes/:id', requireOperatorAuth, requireOperatorRole('G
   res.json({ ok: true })
 })
 
+// ── Email templates (global_admin only) ────────────────────
+router.get('/email-templates', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (_req, res) => {
+  const templates = await prisma.emailTemplate.findMany({
+    orderBy: { name: 'asc' },
+  })
+  res.json({ templates })
+})
+
+router.get('/email-templates/:name', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  const template = await prisma.emailTemplate.findUnique({
+    where: { name: req.params.name },
+  })
+  if (!template) { res.status(404).json({ error: 'Template not found' }); return }
+  res.json({ template })
+})
+
+const emailTemplateSchema = z.object({
+  name: z.string().min(1).max(50),
+  subject: z.string().min(1).max(200),
+  htmlBody: z.string().min(1),
+})
+
+router.post('/email-templates', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  const result = emailTemplateSchema.safeParse(req.body)
+  if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
+
+  const template = await prisma.emailTemplate.upsert({
+    where: { name: result.data.name },
+    update: {
+      subject: result.data.subject,
+      htmlBody: result.data.htmlBody,
+    },
+    create: {
+      name: result.data.name,
+      subject: result.data.subject,
+      htmlBody: result.data.htmlBody,
+    },
+  })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'update_email_template',
+    targetType: 'email_template',
+    targetId: template.id,
+    newValue: { name: template.name, subject: template.subject },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ template })
+})
+
+router.delete('/email-templates/:id', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  const { id } = req.params
+  const template = await prisma.emailTemplate.findUnique({ where: { id } })
+  if (!template) { res.status(404).json({ error: 'Template not found' }); return }
+
+  await prisma.emailTemplate.delete({ where: { id } })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'delete_email_template',
+    targetType: 'email_template',
+    targetId: template.id,
+    oldValue: { name: template.name, subject: template.subject },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ ok: true })
+})
+
 // ── Dashboard stats (helpdesk+) ────────────────────────────
 router.get('/stats', requireOperatorAuth, requireOperatorRole('HELPDESK', 'ACCOUNTING', 'GLOBAL_ADMIN'), async (_req, res) => {
   const [
