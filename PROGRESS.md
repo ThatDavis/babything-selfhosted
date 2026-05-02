@@ -2,6 +2,8 @@
 
 > What has been built and what's next.
 >
+> Last updated: 2026-05-02
+>
 > - Feature specs: `REQUIREMENTS.md`
 > - Architecture & subscription plan: `SUBSCRIPTION_ROADMAP.md`
 > - Git workflow: `DEVELOPMENT.md`
@@ -123,6 +125,7 @@ Building advanced features and hardening the platform.
     - `global_admin`: all actions + manage operators + view audit logs
   - [x] Management actions: suspend/activate tenant, extend trial, delete tenant
   - [~] Security: rate limiting on operator endpoints (via existing authLimiter), optional IP allowlist — TBD
+- [x] Landing page sign-in: email-to-subdomain lookup + modal + remove footer Account link
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
