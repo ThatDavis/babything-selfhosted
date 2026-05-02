@@ -852,8 +852,8 @@ function PlansTab() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input placeholder="Plan name (e.g. Flat Rate)" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input" required />
             <input placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="input" />
-            <input placeholder="Monthly price (cents)" type="number" min={0} value={form.monthlyPrice} onChange={e => setForm(f => ({ ...f, monthlyPrice: parseInt(e.target.value) || 0 }))} className="input" required />
-            <input placeholder="Annual price (cents)" type="number" min={0} value={form.annualPrice} onChange={e => setForm(f => ({ ...f, annualPrice: parseInt(e.target.value) || 0 }))} className="input" required />
+            <input placeholder="Monthly price" type="number" min={0} step="0.01" value={(form.monthlyPrice / 100).toFixed(2)} onChange={e => setForm(f => ({ ...f, monthlyPrice: Math.round(parseFloat(e.target.value) * 100) || 0 }))} className="input" required />
+            <input placeholder="Annual price" type="number" min={0} step="0.01" value={(form.annualPrice / 100).toFixed(2)} onChange={e => setForm(f => ({ ...f, annualPrice: Math.round(parseFloat(e.target.value) * 100) || 0 }))} className="input" required />
             <input placeholder="Stripe monthly price ID" value={form.stripeMonthlyPriceId} onChange={e => setForm(f => ({ ...f, stripeMonthlyPriceId: e.target.value }))} className="input" />
             <input placeholder="Stripe annual price ID" value={form.stripeAnnualPriceId} onChange={e => setForm(f => ({ ...f, stripeAnnualPriceId: e.target.value }))} className="input" />
             <input placeholder="Features (comma-separated)" value={form.features} onChange={e => setForm(f => ({ ...f, features: e.target.value }))} className="input" />

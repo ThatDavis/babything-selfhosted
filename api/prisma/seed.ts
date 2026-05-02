@@ -12,6 +12,21 @@ async function main() {
     })
     console.log(`Seeded template: ${name}`)
   }
+
+  await prisma.plan.upsert({
+    where: { name: 'Flat Rate' },
+    update: {},
+    create: {
+      name: 'Flat Rate',
+      description: 'All features, unlimited babies and caregivers.',
+      monthlyPrice: 800,
+      annualPrice: 7700,
+      features: ['Unlimited babies', 'Unlimited caregivers', 'Real-time sync', 'PDF reports', 'CSV export', 'PWA support'],
+      isActive: true,
+      sortOrder: 0,
+    },
+  })
+  console.log('Seeded plan: Flat Rate')
 }
 
 main()
