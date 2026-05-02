@@ -44,6 +44,21 @@ export interface Stats {
   expiringTrials: number
 }
 
+export interface DiscountCode {
+  id: string
+  code: string
+  type: 'FREE_TIME' | 'PERCENTAGE'
+  value: number
+  maxUses: number | null
+  usedCount: number
+  validFrom: string
+  validUntil: string | null
+  appliesTo: 'ANY' | 'ANNUAL' | 'MONTHLY'
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -112,4 +127,10 @@ export const api = {
     request<{ operator: Operator }>(`/operator/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteOperator: (id: string) =>
     request<{ ok: boolean }>(`/operator/${id}`, { method: 'DELETE' }),
+
+  getDiscountCodes: () => request<{ codes: DiscountCode[] }>('/operator/dashboard/discount-codes'),
+  createDiscountCode: (body: { code: string; type: 'FREE_TIME' | 'PERCENTAGE'; value: number; maxUses?: number; validUntil?: string; appliesTo?: 'ANY' | 'ANNUAL' | 'MONTHLY' }) =>
+    request<{ code: DiscountCode }>('/operator/dashboard/discount-codes', { method: 'POST', body: JSON.stringify(body) }),
+  deleteDiscountCode: (id: string) =>
+    request<{ ok: boolean }>(`/operator/dashboard/discount-codes/${id}`, { method: 'DELETE' }),
 }

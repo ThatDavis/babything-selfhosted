@@ -3,6 +3,7 @@ import fs from 'fs'
 
 const MAIN_APP_URL = process.env.MAIN_APP_URL ?? 'http://localhost:3001'
 const mtlsEnabled = process.env.MTLS_ENABLED === 'true'
+const internalApiKey = process.env.INTERNAL_API_KEY
 
 const tlsCert = mtlsEnabled
   ? fs.readFileSync(process.env.TLS_CERT_PATH ?? '/certs/provisioning-client.crt')
@@ -63,10 +64,17 @@ function internalFetch(
   url: string,
   options: { method: string; headers?: Record<string, string>; body?: string }
 ): Promise<FetchResponse> {
-  if (!mtlsEnabled) {
-    return fetch(url, options as any) as Promise<FetchResponse>
+  const headers: Record<string, string> = {
+    ...options.headers,
   }
-  return mtlsFetch(url, options)
+  if (!mtlsEnabled && internalApiKey) {
+    headers['x-internal-key'] = internalApiKey
+  }
+  const opts = { ...options, headers }
+  if (!mtlsEnabled) {
+    return fetch(url, opts as any) as Promise<FetchResponse>
+  }
+  return mtlsFetch(url, opts)
 }
 
 export async function pushTenantToMainApp(tenant: {
@@ -117,4 +125,36 @@ export async function deleteTenantInMainApp(subdomain: string) {
     const body = await res.json().catch(() => ({})) as { error?: string }
     throw new Error(`Failed to delete tenant: ${res.status} ${body.error ?? ''}`)
   }
+}
+
+export async function validateDiscountCode(code: string, billingPeriod?: string) {
+  const res = await internalFetch(`${MAIN_APP_URL}/internal/discount-codes/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, billingPeriod }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string }
+    throw new Error(body.error ?? 'Invalid discount code')
+  }
+  return res.json() as Promise<{
+    valid: boolean
+    code: string
+    type: 'FREE_TIME' | 'PERCENTAGE'
+    value: number
+    appliesTo: string
+  }>
+}
+
+export async function useDiscountCode(code: string) {
+  const res = await internalFetch(`${MAIN_APP_URL}/internal/discount-codes/use`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string }
+    throw new Error(body.error ?? 'Failed to record discount code usage')
+  }
+  return res.json() as Promise<{ ok: boolean }>
 }

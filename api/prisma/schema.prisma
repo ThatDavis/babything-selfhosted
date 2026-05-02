@@ -348,6 +348,21 @@ model Referral {
   @@index([code])
 }
 
+model DiscountCode {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  type       String    // FREE_TIME | PERCENTAGE
+  value      Int       // days for FREE_TIME, percent for PERCENTAGE
+  maxUses    Int?
+  usedCount  Int       @default(0)
+  validFrom  DateTime  @default(now())
+  validUntil DateTime?
+  appliesTo  String    @default("ANY") // ANY | ANNUAL | MONTHLY
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
 model SystemSettings {
   tenantId      String   @id
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)

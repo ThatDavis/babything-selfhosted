@@ -14,7 +14,7 @@
 
 Building advanced features and hardening the platform.
 
-**Current feature:** mTLS between services
+**Current feature:** Discount code system
 
 ---
 
@@ -96,7 +96,13 @@ Building advanced features and hardening the platform.
 
 - [x] Replace shared API key with mTLS between services
 - [x] Annual plan promotion
-- [x] Referral program
+- [x] ~~Referral program~~ → Replaced by discount codes
+- [x] Discount code system
+  - [x] `DiscountCode` model: `FREE_TIME` and `PERCENTAGE` types
+  - [x] Operator dashboard: create, list, delete discount codes
+  - [x] Landing signup: discount code input with validation
+  - [x] Provisioning service: validate via internal API, apply to Stripe subscription
+  - [x] Sample codes: `SIXMONTHS` (180 days free), `YEARLY20` (20% off annual)
 - [x] Affiliate program
 - [x] Replace Traefik with external reverse proxy support
   - [x] Remove Traefik from docker-compose.cloud.yml
@@ -130,7 +136,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 0/9 | 9 |
+| Phase 5 — Growth | 🔵 In Progress | 4/10 | 6 |
 
 ---
 

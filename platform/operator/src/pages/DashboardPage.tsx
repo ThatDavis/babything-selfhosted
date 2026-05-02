@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../App'
-import { api, Tenant, AuditLog, Operator, Stats } from '../lib/api'
+import { api, Tenant, AuditLog, Operator, Stats, DiscountCode } from '../lib/api'
 
-type Tab = 'tenants' | 'audit' | 'operators'
+type Tab = 'tenants' | 'audit' | 'operators' | 'discounts'
 
 export default function DashboardPage() {
   const { operator, logout } = useAuth()
@@ -56,12 +56,140 @@ export default function DashboardPage() {
             {operator?.role === 'GLOBAL_ADMIN' && (
               <TabButton active={activeTab === 'operators'} onClick={() => setActiveTab('operators')}>Operators</TabButton>
             )}
+            {(operator?.role === 'GLOBAL_ADMIN' || operator?.role === 'ACCOUNTING') && (
+              <TabButton active={activeTab === 'discounts'} onClick={() => setActiveTab('discounts')}>Discount Codes</TabButton>
+            )}
           </nav>
         </div>
 
         {activeTab === 'tenants' && <TenantsTab />}
         {activeTab === 'audit' && <AuditTab />}
         {activeTab === 'operators' && <OperatorsTab />}
+        {activeTab === 'discounts' && <DiscountsTab />}
+      </div>
+    </div>
+  )
+}
+
+// ── Discount Codes Tab ─────────────────────────────────────
+function DiscountsTab() {
+  const [codes, setCodes] = useState<DiscountCode[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({
+    code: '',
+    type: 'FREE_TIME' as 'FREE_TIME' | 'PERCENTAGE',
+    value: 180,
+    maxUses: '',
+    validUntil: '',
+    appliesTo: 'ANY' as 'ANY' | 'ANNUAL' | 'MONTHLY',
+  })
+  const [error, setError] = useState('')
+
+  async function fetchCodes() {
+    const d = await api.getDiscountCodes()
+    setCodes(d.codes)
+  }
+
+  useEffect(() => {
+    fetchCodes()
+  }, [])
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    try {
+      const body: any = {
+        code: form.code,
+        type: form.type,
+        value: form.value,
+        appliesTo: form.appliesTo,
+      }
+      if (form.maxUses) body.maxUses = parseInt(form.maxUses)
+      if (form.validUntil) body.validUntil = new Date(form.validUntil).toISOString()
+      await api.createDiscountCode(body)
+      setShowForm(false)
+      setForm({ code: '', type: 'FREE_TIME', value: 180, maxUses: '', validUntil: '', appliesTo: 'ANY' })
+      fetchCodes()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  async function handleDelete(id: string, code: string) {
+    if (!confirm(`Delete discount code "${code}"?`)) return
+    await api.deleteDiscountCode(id)
+    fetchCodes()
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Discount Codes</h2>
+        <button onClick={() => setShowForm(true)} className="btn-primary">Add Code</button>
+      </div>
+
+      {showForm && (
+        <div className="card mb-4">
+          <h3 className="font-semibold mb-3">New Discount Code</h3>
+          {error && <div className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
+          <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input placeholder="Code (e.g. SIXMONTHS)" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} className="input" required />
+            <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as any }))} className="input">
+              <option value="FREE_TIME">Free time (days)</option>
+              <option value="PERCENTAGE">Percentage off (%)</option>
+            </select>
+            <input placeholder="Value (days or %)" type="number" min={1} value={form.value} onChange={e => setForm(f => ({ ...f, value: parseInt(e.target.value) || 0 }))} className="input" required />
+            <select value={form.appliesTo} onChange={e => setForm(f => ({ ...f, appliesTo: e.target.value as any }))} className="input">
+              <option value="ANY">Any billing period</option>
+              <option value="ANNUAL">Annual only</option>
+              <option value="MONTHLY">Monthly only</option>
+            </select>
+            <input placeholder="Max uses (optional)" type="number" min={1} value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))} className="input" />
+            <input placeholder="Valid until (optional)" type="date" value={form.validUntil} onChange={e => setForm(f => ({ ...f, validUntil: e.target.value }))} className="input" />
+            <div className="sm:col-span-2 flex gap-2">
+              <button type="submit" className="btn-primary">Create</button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
+        <table className="min-w-full divide-y divide-stone-200">
+          <thead className="bg-stone-50">
+            <tr>
+              <th className="table-header">Code</th>
+              <th className="table-header">Type</th>
+              <th className="table-header">Value</th>
+              <th className="table-header">Uses</th>
+              <th className="table-header">Applies To</th>
+              <th className="table-header">Status</th>
+              <th className="table-header">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-200">
+            {codes.map(dc => (
+              <tr key={dc.id} className="hover:bg-stone-50">
+                <td className="table-cell font-medium">{dc.code}</td>
+                <td className="table-cell">{dc.type === 'FREE_TIME' ? 'Free time' : 'Percentage'}</td>
+                <td className="table-cell">{dc.type === 'FREE_TIME' ? `${dc.value} days` : `${dc.value}%`}</td>
+                <td className="table-cell">{dc.usedCount}{dc.maxUses !== null ? ` / ${dc.maxUses}` : ''}</td>
+                <td className="table-cell">{dc.appliesTo}</td>
+                <td className="table-cell">
+                  {dc.isActive ? <span className="badge-green">Active</span> : <span className="badge-gray">Inactive</span>}
+                </td>
+                <td className="table-cell">
+                  <button onClick={() => handleDelete(dc.id, dc.code)} className="text-xs text-red-600 hover:text-red-700">Delete</button>
+                </td>
+              </tr>
+            ))}
+            {codes.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-stone-500">No discount codes yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

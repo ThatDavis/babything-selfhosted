@@ -102,4 +102,77 @@ router.get('/tenants/:subdomain', requireInternalKey, async (req, res) => {
   res.json(tenant)
 })
 
+// ── Validate discount code (called by provisioning service) ─
+const validateDiscountCodeSchema = z.object({
+  code: z.string().min(1),
+  billingPeriod: z.enum(['MONTHLY', 'ANNUAL']).optional(),
+})
+
+router.post('/discount-codes/validate', requireInternalKey, async (req, res) => {
+  const result = validateDiscountCodeSchema.safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({ error: result.error.flatten() })
+    return
+  }
+
+  const { code, billingPeriod } = result.data
+
+  const discountCode = await prisma.discountCode.findUnique({
+    where: { code: code.toUpperCase() },
+  })
+
+  if (!discountCode || !discountCode.isActive) {
+    res.status(404).json({ error: 'Invalid discount code' })
+    return
+  }
+
+  if (discountCode.validUntil && new Date() > discountCode.validUntil) {
+    res.status(400).json({ error: 'Discount code has expired' })
+    return
+  }
+
+  if (discountCode.maxUses !== null && discountCode.usedCount >= discountCode.maxUses) {
+    res.status(400).json({ error: 'Discount code usage limit reached' })
+    return
+  }
+
+  if (billingPeriod && discountCode.appliesTo !== 'ANY' && discountCode.appliesTo !== billingPeriod) {
+    res.status(400).json({ error: `Discount code not valid for ${billingPeriod.toLowerCase()} billing` })
+    return
+  }
+
+  res.json({
+    valid: true,
+    code: discountCode.code,
+    type: discountCode.type,
+    value: discountCode.value,
+    appliesTo: discountCode.appliesTo,
+  })
+})
+
+// ── Record discount code usage (called by provisioning service)
+router.post('/discount-codes/use', requireInternalKey, async (req, res) => {
+  const result = z.object({ code: z.string().min(1) }).safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({ error: result.error.flatten() })
+    return
+  }
+
+  const discountCode = await prisma.discountCode.findUnique({
+    where: { code: result.data.code.toUpperCase() },
+  })
+
+  if (!discountCode) {
+    res.status(404).json({ error: 'Discount code not found' })
+    return
+  }
+
+  await prisma.discountCode.update({
+    where: { id: discountCode.id },
+    data: { usedCount: { increment: 1 } },
+  })
+
+  res.json({ ok: true })
+})
+
 export default router

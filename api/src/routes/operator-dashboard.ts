@@ -232,6 +232,76 @@ router.get('/audit-logs', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN
   })
 })
 
+// ── Discount codes (accounting+) ───────────────────────────
+router.get('/discount-codes', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GLOBAL_ADMIN'), async (_req, res) => {
+  const codes = await prisma.discountCode.findMany({
+    orderBy: { createdAt: 'desc' },
+  })
+  res.json({ codes })
+})
+
+const createDiscountCodeSchema = z.object({
+  code: z.string().min(1).max(50),
+  type: z.enum(['FREE_TIME', 'PERCENTAGE']),
+  value: z.number().int().min(1),
+  maxUses: z.number().int().min(1).optional(),
+  validUntil: z.string().datetime().optional(),
+  appliesTo: z.enum(['ANY', 'ANNUAL', 'MONTHLY']).default('ANY'),
+})
+
+router.post('/discount-codes', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GLOBAL_ADMIN'), async (req, res) => {
+  const result = createDiscountCodeSchema.safeParse(req.body)
+  if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
+
+  const existing = await prisma.discountCode.findUnique({
+    where: { code: result.data.code },
+  })
+  if (existing) { res.status(409).json({ error: 'Code already exists' }); return }
+
+  const code = await prisma.discountCode.create({
+    data: {
+      code: result.data.code.toUpperCase(),
+      type: result.data.type,
+      value: result.data.value,
+      maxUses: result.data.maxUses,
+      validUntil: result.data.validUntil ? new Date(result.data.validUntil) : null,
+      appliesTo: result.data.appliesTo,
+    },
+  })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'create_discount_code',
+    targetType: 'discount_code',
+    targetId: code.id,
+    newValue: { code: code.code, type: code.type, value: code.value },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.status(201).json({ code })
+})
+
+router.delete('/discount-codes/:id', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  const { id } = req.params
+  const code = await prisma.discountCode.findUnique({ where: { id } })
+  if (!code) { res.status(404).json({ error: 'Discount code not found' }); return }
+
+  await prisma.discountCode.delete({ where: { id } })
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'delete_discount_code',
+    targetType: 'discount_code',
+    targetId: code.id,
+    oldValue: { code: code.code, type: code.type, value: code.value },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ ok: true })
+})
+
 // ── Dashboard stats (helpdesk+) ────────────────────────────
 router.get('/stats', requireOperatorAuth, requireOperatorRole('HELPDESK', 'ACCOUNTING', 'GLOBAL_ADMIN'), async (_req, res) => {
   const [

@@ -10,25 +10,15 @@ export default function AccountPage() {
     trialEndsAt: string | null
     billingPeriod: string | null
   } | null>(null)
-  const [referralStats, setReferralStats] = useState<{
-    referralCode: string | null
-    totalReferrals: number
-    referrals: { refereeSubdomain: string; status: string; createdAt: string }[]
-  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!subdomain) { setLoading(false); return }
-    Promise.all([
-      api.tenantStatus(subdomain),
-      api.referralStats(subdomain),
-    ])
-      .then(([t, r]) => {
+    api.tenantStatus(subdomain)
+      .then(t => {
         setTenant({ status: t.status, trialEndsAt: t.trialEndsAt, billingPeriod: t.billingPeriod })
-        setReferralStats(r)
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false))
@@ -59,15 +49,6 @@ export default function AccountPage() {
     }
   }
 
-  function copyReferralLink() {
-    if (!referralStats?.referralCode) return
-    const link = `${window.location.origin}/signup?ref=${referralStats.referralCode}`
-    navigator.clipboard.writeText(link).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-400 border-t-transparent rounded-full animate-spin" /></div>
   if (!subdomain || error) return (
     <div className="min-h-screen flex items-center justify-center px-6">
@@ -91,28 +72,6 @@ export default function AccountPage() {
             <p><span className="text-stone-500">Trial ends:</span> {new Date(tenant.trialEndsAt).toLocaleDateString()}</p>
           )}
         </div>
-
-        {referralStats?.referralCode && (
-          <div className="pt-4 border-t border-stone-100 space-y-3">
-            <h3 className="font-semibold text-stone-700">Referral program</h3>
-            <p className="text-sm text-stone-500">Share your link and you both get an extra week free.</p>
-            <div className="flex gap-2">
-              <input
-                readOnly
-                className="input flex-1 text-sm bg-stone-50"
-                value={`${window.location.origin}/signup?ref=${referralStats.referralCode}`}
-              />
-              <button onClick={copyReferralLink} className="btn-primary text-sm whitespace-nowrap">
-                {copied ? 'Copied!' : 'Copy link'}
-              </button>
-            </div>
-            {referralStats.totalReferrals > 0 && (
-              <p className="text-sm text-green-600 font-medium">
-                {referralStats.totalReferrals} referral{referralStats.totalReferrals === 1 ? '' : 's'} joined
-              </p>
-            )}
-          </div>
-        )}
 
         <div className="pt-4 border-t border-stone-100 space-y-3">
           <button
