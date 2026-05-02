@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { requireAdmin } from '../middleware/admin.js'
 import { sendTestEmail } from '../lib/mailer.js'
 import { AuthRequest } from '../middleware/auth.js'
-import { encryptOptional, decryptOptional } from '../lib/crypto.js'
+import { encryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 import { getTenantId } from '../lib/tenant-context.js'
 

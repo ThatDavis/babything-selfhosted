@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, Plan } from '../lib/api'
 
 function formatPrice(cents: number) {
-  return `$${(cents / 100).toFixed(0)}`
+  const dollars = cents / 100
+  return dollars % 1 === 0 ? `$${dollars.toFixed(0)}` : `$${dollars.toFixed(2)}`
 }
 
 function calcSavingsPercent(monthlyPrice: number, annualPrice: number) {

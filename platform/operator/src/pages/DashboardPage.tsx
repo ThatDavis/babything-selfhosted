@@ -866,6 +866,8 @@ function PlansTab() {
 
     if (annualMode === 'discount') {
       body.annualDiscountPercent = discount
+    } else {
+      body.annualDiscountPercent = null
     }
 
     try {
@@ -889,7 +891,8 @@ function PlansTab() {
   }
 
   function formatPrice(cents: number) {
-    return `$${(cents / 100).toFixed(2)}`
+    const dollars = cents / 100
+    return dollars % 1 === 0 ? `$${dollars.toFixed(0)}` : `$${dollars.toFixed(2)}`
   }
 
   return (

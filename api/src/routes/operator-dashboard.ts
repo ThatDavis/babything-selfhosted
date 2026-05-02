@@ -495,7 +495,7 @@ router.post('/plans', requireOperatorAuth, requireOperatorRole('ACCOUNTING', 'GL
 
   if (annualDiscountPercent != null) {
     annualPrice = Math.round(result.data.monthlyPrice * 12 * (100 - annualDiscountPercent) / 100)
-  } else if (!result.data.annualPrice) {
+  } else if (result.data.annualPrice == null) {
     annualPrice = Math.round(result.data.monthlyPrice * 12)
   }
 
@@ -546,6 +546,11 @@ router.patch('/plans/:id', requireOperatorAuth, requireOperatorRole('ACCOUNTING'
 
   const plan = await prisma.plan.findUnique({ where: { id: req.params.id } })
   if (!plan) { res.status(404).json({ error: 'Plan not found' }); return }
+
+  if (result.data.name && result.data.name !== plan.name) {
+    const nameTaken = await prisma.plan.findUnique({ where: { name: result.data.name } })
+    if (nameTaken) { res.status(409).json({ error: 'Plan name already exists' }); return }
+  }
 
   const data: any = { ...result.data }
   const monthlyPrice = data.monthlyPrice ?? plan.monthlyPrice

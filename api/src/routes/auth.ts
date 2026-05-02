@@ -62,7 +62,7 @@ if (googleClientId && googleClientSecret) {
             } else {
               const tenantId = getTenantId()
               if (tenantId) {
-                const count = await prisma.user.count()
+                const count = await prisma.user.count({ where: { tenantId } })
                 user = await prisma.user.create({
                   data: { email, name, oauthProvider: 'google', oauthId, isAdmin: count === 0, tenantId },
                 })
@@ -121,7 +121,7 @@ const COOKIE_OPTS = {
 
 // ── Setup check ──────────────────────────────────────────
 router.get('/setup', async (_req, res) => {
-  const count = await prisma.user.count()
+  const count = await prisma.user.count({ where: { tenantId: getTenantId()! } })
   res.json({ needed: count === 0 })
 })
 
@@ -134,7 +134,7 @@ router.post('/register', async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) { res.status(409).json({ error: 'Email already registered' }); return }
 
-  const count = await prisma.user.count()
+  const count = await prisma.user.count({ where: { tenantId: getTenantId()! } })
   const passwordHash = await bcrypt.hash(password, 12)
   const user = await prisma.user.create({ data: { email, passwordHash, name, isAdmin: count === 0, tenantId: getTenantId()! } })
   const token = signToken(user.id)
@@ -212,7 +212,11 @@ router.post('/forgot-password', async (req, res) => {
     data: { userId: user.id, token, expiresAt: new Date(Date.now() + 3600_000), tenantId: getTenantId()! },
   })
   const url = `${process.env.APP_URL ?? 'http://localhost'}/reset-password/${token}`
-  await sendPasswordResetEmail(user.email, user.name, url)
+  try {
+    await sendPasswordResetEmail(user.email, user.name, url)
+  } catch {
+    // Email sending is best-effort
+  }
   audit(req, 'password_reset_requested', 'success', { actor: user.id, details: { email: user.email } })
   res.json({ ok: true })
 })
@@ -445,7 +449,7 @@ router.get('/oauth/:name/callback', async (req: Request, res: Response) => {
     if (user) {
       await prisma.user.update({ where: { id: user.id }, data: { oauthProvider: provider.name, oauthId } })
     } else {
-      const count = await prisma.user.count()
+      const count = await prisma.user.count({ where: { tenantId: getTenantId()! } })
       user = await prisma.user.create({ data: { email, name, oauthProvider: provider.name, oauthId, isAdmin: count === 0, tenantId: getTenantId()! } })
     }
   }

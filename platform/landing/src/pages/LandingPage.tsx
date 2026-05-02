@@ -8,7 +8,8 @@ const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.
 const DONATION_URL = import.meta.env.VITE_DONATION_URL
 
 function formatPrice(cents: number) {
-  return `$${(cents / 100).toFixed(0)}`
+  const dollars = cents / 100
+  return dollars % 1 === 0 ? `$${dollars.toFixed(0)}` : `$${dollars.toFixed(2)}`
 }
 
 function calcSavingsPercent(monthlyPrice: number, annualPrice: number) {
