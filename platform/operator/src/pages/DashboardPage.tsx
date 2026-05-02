@@ -537,6 +537,10 @@ function TemplatesTab() {
   const [form, setForm] = useState({ name: '', subject: '', htmlBody: '' })
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [testEmail, setTestEmail] = useState('')
+  const [testLoading, setTestLoading] = useState(false)
+  const [testMessage, setTestMessage] = useState('')
+  const [testError, setTestError] = useState('')
 
   const builtInTemplates = [
     { name: 'welcome', label: 'Welcome (registration)', vars: 'name, appUrl' },
@@ -565,6 +569,9 @@ function TemplatesTab() {
     }
     setError('')
     setMessage('')
+    setTestMessage('')
+    setTestError('')
+    setTestEmail('')
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -659,9 +666,49 @@ function TemplatesTab() {
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary">Save Template</button>
-                <button type="button" onClick={() => { setEditing(null); setForm({ name: '', subject: '', htmlBody: '' }); setError(''); setMessage('') }} className="btn-secondary">Cancel</button>
+                <button type="button" onClick={() => { setEditing(null); setForm({ name: '', subject: '', htmlBody: '' }); setError(''); setMessage(''); setTestMessage(''); setTestError(''); setTestEmail('') }} className="btn-secondary">Cancel</button>
               </div>
             </form>
+
+            {/* Test email */}
+            <div className="mt-6 pt-6 border-t border-stone-200">
+              <h4 className="text-sm font-medium mb-2">Send Test Email</h4>
+              <p className="text-xs text-stone-500 mb-3">
+                Sends this template with sample variables to review formatting.
+              </p>
+              {testMessage && <div className="mb-3 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">{testMessage}</div>}
+              {testError && <div className="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{testError}</div>}
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={testEmail}
+                  onChange={e => setTestEmail(e.target.value)}
+                  className="input flex-1"
+                />
+                <button
+                  onClick={async () => {
+                    setTestError('')
+                    setTestMessage('')
+                    if (!testEmail) { setTestError('Enter an email address'); return }
+                    setTestLoading(true)
+                    try {
+                      await api.sendTestEmail(form.name, testEmail)
+                      setTestMessage('Test email sent.')
+                      setTestEmail('')
+                    } catch (err: any) {
+                      setTestError(err.message)
+                    } finally {
+                      setTestLoading(false)
+                    }
+                  }}
+                  disabled={testLoading}
+                  className="btn-secondary"
+                >
+                  {testLoading ? 'Sending...' : 'Send Test'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

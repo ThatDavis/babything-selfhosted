@@ -150,4 +150,6 @@ export const api = {
     request<{ template: EmailTemplate }>('/operator/dashboard/email-templates', { method: 'POST', body: JSON.stringify(body) }),
   deleteEmailTemplate: (id: string) =>
     request<{ ok: boolean }>(`/operator/dashboard/email-templates/${id}`, { method: 'DELETE' }),
+  sendTestEmail: (name: string, to: string) =>
+    request<{ ok: boolean }>(`/operator/dashboard/email-templates/${name}/test`, { method: 'POST', body: JSON.stringify({ to }) }),
 }

@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js'
 import { requireOperatorAuth, requireOperatorRole, OperatorAuthRequest } from '../middleware/operator-auth.js'
 import { logOperatorAction } from '../lib/operator-audit.js'
 import { deleteTenantInProvisioning } from '../lib/provisioning.js'
+import { sendTemplateTestEmail } from '../lib/mailer.js'
 
 const router = Router()
 
@@ -372,6 +373,48 @@ router.delete('/email-templates/:id', requireOperatorAuth, requireOperatorRole('
     targetType: 'email_template',
     targetId: template.id,
     oldValue: { name: template.name, subject: template.subject },
+    ipAddress: req.ip ?? req.socket?.remoteAddress,
+  })
+
+  res.json({ ok: true })
+})
+
+// ── Send test email for a template (global_admin only) ─────
+const testEmailSchema = z.object({
+  to: z.string().email(),
+})
+
+const sampleTemplateVars: Record<string, Record<string, string>> = {
+  welcome: { name: 'Alex', appUrl: 'https://demo.babything.app' },
+  invite: { inviterName: 'Jordan', babyName: 'Milo', inviteUrl: 'https://demo.babything.app/invite/abc123' },
+  password_reset: { name: 'Alex', resetUrl: 'https://demo.babything.app/reset?token=abc123' },
+  report: { babyName: 'Milo' },
+}
+
+router.post('/email-templates/:name/test', requireOperatorAuth, requireOperatorRole('GLOBAL_ADMIN'), async (req, res) => {
+  const result = testEmailSchema.safeParse(req.body)
+  if (!result.success) { res.status(400).json({ error: result.error.flatten() }); return }
+
+  const { name } = req.params
+  const { to } = result.data
+
+  const vars = sampleTemplateVars[name]
+  if (!vars) { res.status(400).json({ error: 'Unknown template name' }); return }
+
+  try {
+    await sendTemplateTestEmail(to, name, vars)
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to send test email' })
+    return
+  }
+
+  const actorId = (req as OperatorAuthRequest).operatorId
+  await logOperatorAction({
+    operatorId: actorId,
+    action: 'send_test_email',
+    targetType: 'email_template',
+    targetId: name,
+    newValue: { to, templateName: name },
     ipAddress: req.ip ?? req.socket?.remoteAddress,
   })
 
