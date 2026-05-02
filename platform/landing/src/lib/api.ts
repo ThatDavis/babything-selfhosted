@@ -15,7 +15,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
+export interface Plan {
+  id: string
+  name: string
+  description: string | null
+  monthlyPrice: number
+  annualPrice: number
+  annualDiscountPercent: number | null
+  stripeMonthlyPriceId: string | null
+  stripeAnnualPriceId: string | null
+  features: string[]
+  isActive: boolean
+  sortOrder: number
+}
+
 export const api = {
+  getPlans: () =>
+    request<{ plans: Plan[] }>('/plans'),
   provision: (body: { email: string; name: string; subdomain: string; billingPeriod: 'MONTHLY' | 'ANNUAL'; discountCode?: string }) =>
     request<{ tenant: { subdomain: string; status: string }; trialEndsAt: string; discount: { type: string; value: number; code: string } | null }>('/tenants', { method: 'POST', body: JSON.stringify(body) }),
   lookupTenant: (body: { email: string }) =>

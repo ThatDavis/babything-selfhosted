@@ -1,20 +1,39 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, Plan } from '../lib/api'
 import AffiliateScript from '../components/AffiliateScript'
 
 const AFFILIATE_SIGNUP_URL = import.meta.env.VITE_AFFILIATE_SIGNUP_URL
 const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com/ThatDavis/babything-selfhosted'
 const DONATION_URL = import.meta.env.VITE_DONATION_URL
 
+function formatPrice(cents: number) {
+  return `$${(cents / 100).toFixed(0)}`
+}
+
+function calcSavingsPercent(monthlyPrice: number, annualPrice: number) {
+  const fullAnnual = monthlyPrice * 12
+  if (fullAnnual <= 0) return 0
+  return Math.round((1 - annualPrice / fullAnnual) * 100)
+}
+
 export default function LandingPage() {
   const navigate = useNavigate()
   const [annual, setAnnual] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
 
   const [showSignIn, setShowSignIn] = useState(false)
   const [signInEmail, setSignInEmail] = useState('')
   const [signInLoading, setSignInLoading] = useState(false)
   const [signInError, setSignInError] = useState('')
+
+  useEffect(() => {
+    api.getPlans()
+      .then(d => setPlans(d.plans.filter(p => p.isActive)))
+      .catch(() => {})
+      .finally(() => setPlansLoading(false))
+  }, [])
 
   async function handleSignIn(e: FormEvent) {
     e.preventDefault()
@@ -76,48 +95,77 @@ export default function LandingPage() {
 
         <section className="text-center space-y-6">
           <h2 className="text-3xl font-serif text-stone-800">Simple pricing</h2>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <span className={`text-sm font-medium ${!annual ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className="relative w-12 h-6 rounded-full bg-brand-200 transition-colors"
+              aria-label="Toggle annual billing"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-brand-600 transition-transform ${annual ? 'translate-x-6' : ''}`}
+              />
+            </button>
+            <span className={`text-sm font-medium ${annual ? 'text-stone-800' : 'text-stone-400'}`}>Annual</span>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {/* Cloud */}
-            <div className="card">
-              <div className="text-2xl mb-2">☁️</div>
-              <h3 className="font-semibold text-stone-700 mb-2">Cloud</h3>
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <span className={`text-sm font-medium ${!annual ? 'text-stone-800' : 'text-stone-400'}`}>Monthly</span>
-                <button
-                  onClick={() => setAnnual(!annual)}
-                  className="relative w-12 h-6 rounded-full bg-brand-200 transition-colors"
-                  aria-label="Toggle annual billing"
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-brand-600 transition-transform ${annual ? 'translate-x-6' : ''}`}
-                  />
-                </button>
-                <span className={`text-sm font-medium ${annual ? 'text-stone-800' : 'text-stone-400'}`}>Annual</span>
+            {/* Cloud plans */}
+            {plansLoading ? (
+              <div className="card flex items-center justify-center py-12">
+                <p className="text-stone-400 text-sm">Loading plans…</p>
               </div>
+            ) : plans.length === 0 ? (
+              <div className="card flex items-center justify-center py-12">
+                <p className="text-stone-400 text-sm">No plans available.</p>
+              </div>
+            ) : (
+              plans.map(plan => {
+                const savings = calcSavingsPercent(plan.monthlyPrice, plan.annualPrice)
+                return (
+                  <div key={plan.id} className="card">
+                    <div className="text-2xl mb-2">☁️</div>
+                    <h3 className="font-semibold text-stone-700 mb-2">{plan.name}</h3>
+                    {plan.description && <p className="text-sm text-stone-500 mb-3">{plan.description}</p>}
 
-              {annual ? (
-                <>
-                  <p className="text-4xl font-serif text-brand-600">$77<span className="text-lg text-stone-500 font-normal">/yr</span></p>
-                  <p className="text-sm text-green-600 mt-1 font-medium">~20% savings vs monthly</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-4xl font-serif text-brand-600">$8<span className="text-lg text-stone-500 font-normal">/mo</span></p>
-                  <p className="text-sm text-stone-500 mt-1">or $77/yr (~20% savings)</p>
-                </>
-              )}
+                    {annual ? (
+                      <>
+                        <p className="text-4xl font-serif text-brand-600">{formatPrice(plan.annualPrice)}<span className="text-lg text-stone-500 font-normal">/yr</span></p>
+                        {savings > 0 && (
+                          <p className="text-sm text-green-600 mt-1 font-medium">~{savings}% savings vs monthly</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-4xl font-serif text-brand-600">{formatPrice(plan.monthlyPrice)}<span className="text-lg text-stone-500 font-normal">/mo</span></p>
+                        {savings > 0 && (
+                          <p className="text-sm text-stone-500 mt-1">or {formatPrice(plan.annualPrice)}/yr (~{savings}% savings)</p>
+                        )}
+                      </>
+                    )}
 
-              <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
-                <li>✓ Unlimited babies & caregivers</li>
-                <li>✓ All tracking features</li>
-                <li>✓ Automatic SSL & backups</li>
-                <li>✓ Platform-managed email & sign-in</li>
-                <li>✓ Private subdomain</li>
-              </ul>
-              <button onClick={() => navigate(`/signup?period=${annual ? 'annual' : 'monthly'}`)} className="btn-primary w-full mt-6">
-                Start free trial
-              </button>
-            </div>
+                    <ul className="text-sm text-stone-600 space-y-2 mt-4 text-left">
+                      {plan.features.length > 0 ? (
+                        plan.features.map((feature, i) => (
+                          <li key={i}>✓ {feature}</li>
+                        ))
+                      ) : (
+                        <>
+                          <li>✓ Unlimited babies & caregivers</li>
+                          <li>✓ All tracking features</li>
+                          <li>✓ Automatic SSL & backups</li>
+                          <li>✓ Platform-managed email & sign-in</li>
+                          <li>✓ Private subdomain</li>
+                        </>
+                      )}
+                    </ul>
+                    <button onClick={() => navigate(`/signup?period=${annual ? 'annual' : 'monthly'}`)} className="btn-primary w-full mt-6">
+                      Start free trial
+                    </button>
+                  </div>
+                )
+              })
+            )}
 
             {/* Self-hosted */}
             <div className="card">

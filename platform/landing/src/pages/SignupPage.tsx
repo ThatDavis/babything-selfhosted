@@ -1,6 +1,16 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, Plan } from '../lib/api'
+
+function formatPrice(cents: number) {
+  return `$${(cents / 100).toFixed(0)}`
+}
+
+function calcSavingsPercent(monthlyPrice: number, annualPrice: number) {
+  const fullAnnual = monthlyPrice * 12
+  if (fullAnnual <= 0) return 0
+  return Math.round((1 - annualPrice / fullAnnual) * 100)
+}
 
 export default function SignupPage() {
   const navigate = useNavigate()
@@ -14,6 +24,17 @@ export default function SignupPage() {
   const [discountCode, setDiscountCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+
+  const plan = plans[0]
+
+  useEffect(() => {
+    api.getPlans()
+      .then(d => setPlans(d.plans.filter(p => p.isActive)))
+      .catch(() => {})
+      .finally(() => setPlansLoading(false))
+  }, [])
 
   const RESERVED_SUBDOMAINS = new Set([
     'operator', 'www', 'api', 'mail', 'admin', 'support', 'help', 'billing',
@@ -105,11 +126,21 @@ export default function SignupPage() {
         </div>
 
         <div className="text-center">
-          <p className="text-2xl font-bold text-brand-600">
-            {billingPeriod === 'ANNUAL' ? '$77/yr' : '$8/mo'}
-          </p>
-          {billingPeriod === 'ANNUAL' && (
-            <p className="text-xs text-green-600 font-medium">~20% savings</p>
+          {plansLoading ? (
+            <p className="text-sm text-stone-400">Loading…</p>
+          ) : plan ? (
+            <>
+              <p className="text-2xl font-bold text-brand-600">
+                {billingPeriod === 'ANNUAL' ? `${formatPrice(plan.annualPrice)}/yr` : `${formatPrice(plan.monthlyPrice)}/mo`}
+              </p>
+              {billingPeriod === 'ANNUAL' && calcSavingsPercent(plan.monthlyPrice, plan.annualPrice) > 0 && (
+                <p className="text-xs text-green-600 font-medium">
+                  ~{calcSavingsPercent(plan.monthlyPrice, plan.annualPrice)}% savings
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-stone-400">Plans unavailable</p>
           )}
         </div>
 

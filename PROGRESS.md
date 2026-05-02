@@ -153,6 +153,7 @@ Building advanced features and hardening the platform.
   - [x] `ACCOUNTING` role has full access (create, update, delete) by default
   - [x] Internal API: `/internal/plans` for provisioning service to read dynamic price IDs
   - [x] Provisioning service fetches Stripe price IDs from plan catalog, falls back to env vars
+  - [x] Landing page sync: fetch active plans from public API instead of hardcoded prices (PR #18)
 - [x] Repo split: cloud vs self-hosted
   - [x] Harden `babything-cloud` repo — remove self-hosted artifacts, hardcode cloud mode
   - [x] Create `babything-selfhosted` fork — strip cloud-only code, hardcode self-hosted mode
