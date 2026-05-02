@@ -15,6 +15,8 @@ const createSchema = z.object({
   referralCode: z.string().optional(),
 })
 
+const bypassStripe = process.env.STRIPE_BYPASS === 'true'
+
 function getStripePriceId(billingPeriod: string): string {
   if (billingPeriod === 'ANNUAL') {
     const id = process.env.STRIPE_ANNUAL_PRICE_ID
@@ -44,15 +46,17 @@ async function applyReferralReward(referralCode: string, refereeSubdomain: strin
 
   if (referrer.status === 'TRIAL' && referrer.trialEndsAt) {
     const newTrialEnd = new Date(referrer.trialEndsAt.getTime() + extraDays)
-    try {
-      const stripe = assertStripe()
-      if (referrer.stripeSubscriptionId) {
-        await stripe.subscriptions.update(referrer.stripeSubscriptionId, {
-          trial_end: Math.floor(newTrialEnd.getTime() / 1000),
-        })
+    if (!bypassStripe) {
+      try {
+        const stripe = assertStripe()
+        if (referrer.stripeSubscriptionId) {
+          await stripe.subscriptions.update(referrer.stripeSubscriptionId, {
+            trial_end: Math.floor(newTrialEnd.getTime() / 1000),
+          })
+        }
+      } catch (err) {
+        console.error('Failed to extend referrer trial in Stripe:', err)
       }
-    } catch (err) {
-      console.error('Failed to extend referrer trial in Stripe:', err)
     }
     await prisma.tenantSubscription.update({
       where: { id: referrer.id },
@@ -114,31 +118,35 @@ router.post('/', async (req, res) => {
   const trialEndsAt = new Date(Date.now() + baseTrialMs + referralBonusMs)
   const newReferralCode = generateReferralCode(subdomain)
 
-  try {
-    const stripe = assertStripe()
+  if (!bypassStripe) {
+    try {
+      const stripe = assertStripe()
 
-    const customer = await stripe.customers.create({
-      email,
-      name,
-      metadata: { subdomain },
-    })
-    stripeCustomerId = customer.id
+      const customer = await stripe.customers.create({
+        email,
+        name,
+        metadata: { subdomain },
+      })
+      stripeCustomerId = customer.id
 
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      trial_end: Math.floor(trialEndsAt.getTime() / 1000),
-      items: [
-        {
-          price: getStripePriceId(billingPeriod),
-        },
-      ],
-      metadata: { subdomain },
-    })
-    stripeSubscriptionId = subscription.id
-  } catch (err) {
-    console.error('Stripe error:', err)
-    res.status(500).json({ error: 'Billing setup failed' })
-    return
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        trial_end: Math.floor(trialEndsAt.getTime() / 1000),
+        items: [
+          {
+            price: getStripePriceId(billingPeriod),
+          },
+        ],
+        metadata: { subdomain },
+      })
+      stripeSubscriptionId = subscription.id
+    } catch (err) {
+      console.error('Stripe error:', err)
+      res.status(500).json({ error: 'Billing setup failed' })
+      return
+    }
+  } else {
+    stripeCustomerId = `cus_bypass_${subdomain}`
   }
 
   const customerRecord = await prisma.customer.create({
