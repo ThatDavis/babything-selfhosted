@@ -131,6 +131,11 @@ Building advanced features and hardening the platform.
   - [x] Mailer uses DB templates with `{{variable}}` substitution, falls back to hardcoded defaults
   - [x] Welcome email sent on user registration
   - [x] Operator dashboard: edit/reset templates for welcome, invite, password reset, report
+- [x] Operator section permissions
+  - [x] `SECTION_PERMISSIONS` config maps each dashboard section to allowed roles
+  - [x] `GET /operator/auth/permissions` returns accessible sections for current operator
+  - [x] Frontend renders tabs based on permissions; global_admin bypasses all checks
+  - [x] Unassigned sections are inaccessible to everyone except global_admin
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
@@ -144,7 +149,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 10/12 | 2 |
+| Phase 5 — Growth | 🔵 In Progress | 11/13 | 2 |
 
 ---
 

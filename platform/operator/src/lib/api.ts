@@ -98,6 +98,7 @@ export const api = {
     }),
   logout: () => request<{ ok: boolean }>('/operator/auth/logout', { method: 'POST' }),
   me: () => request<{ operator: Operator }>('/operator/auth/me'),
+  getPermissions: () => request<{ sections: string[] }>('/operator/auth/permissions'),
 
   getStats: () => request<{ stats: Stats }>('/operator/dashboard/stats'),
   getTenants: (params?: { status?: string; search?: string; page?: number; limit?: number }) => {

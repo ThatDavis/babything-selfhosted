@@ -2,16 +2,25 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../App'
 import { api, Tenant, AuditLog, Operator, Stats, DiscountCode, EmailTemplate } from '../lib/api'
 
-type Tab = 'tenants' | 'audit' | 'operators' | 'discounts' | 'templates'
+const ALL_TABS = ['tenants', 'audit', 'operators', 'discounts', 'templates'] as const
+type Tab = typeof ALL_TABS[number]
 
 export default function DashboardPage() {
-  const { operator, logout } = useAuth()
+  const { operator, logout, permissions } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('tenants')
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
     api.getStats().then(d => setStats(d.stats)).catch(() => {})
   }, [])
+
+  // If current tab is not in permissions, switch to first available
+  useEffect(() => {
+    if (permissions.length > 0 && !permissions.includes(activeTab)) {
+      const first = ALL_TABS.find(t => permissions.includes(t))
+      if (first) setActiveTab(first)
+    }
+  }, [permissions, activeTab])
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -51,15 +60,19 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="border-b border-stone-200 mb-6">
           <nav className="flex gap-6">
-            <TabButton active={activeTab === 'tenants'} onClick={() => setActiveTab('tenants')}>Tenants</TabButton>
-            <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')}>Audit Logs</TabButton>
-            {operator?.role === 'GLOBAL_ADMIN' && (
+            {permissions.includes('tenants') && (
+              <TabButton active={activeTab === 'tenants'} onClick={() => setActiveTab('tenants')}>Tenants</TabButton>
+            )}
+            {permissions.includes('audit') && (
+              <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')}>Audit Logs</TabButton>
+            )}
+            {permissions.includes('operators') && (
               <TabButton active={activeTab === 'operators'} onClick={() => setActiveTab('operators')}>Operators</TabButton>
             )}
-            {(operator?.role === 'GLOBAL_ADMIN' || operator?.role === 'ACCOUNTING') && (
+            {permissions.includes('discounts') && (
               <TabButton active={activeTab === 'discounts'} onClick={() => setActiveTab('discounts')}>Discount Codes</TabButton>
             )}
-            {operator?.role === 'GLOBAL_ADMIN' && (
+            {permissions.includes('templates') && (
               <TabButton active={activeTab === 'templates'} onClick={() => setActiveTab('templates')}>Email Templates</TabButton>
             )}
           </nav>

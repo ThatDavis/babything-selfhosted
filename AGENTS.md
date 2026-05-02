@@ -88,6 +88,21 @@ All transactional emails are driven by the `EmailTemplate` table (`api/prisma/sc
   3. Add a default template in the fallback object
   4. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`
 
+### Operator dashboard permissions
+Sections (tabs) in the operator dashboard are config-driven via `api/src/lib/operator-permissions.ts`.
+
+- **Config:** `SECTION_PERMISSIONS` maps section IDs (`tenants`, `audit`, `operators`, `discounts`, `templates`) to arrays of allowed `OperatorRole`
+- **Global admin bypass:** `GLOBAL_ADMIN` always has access to all sections regardless of the config
+- **Unassigned sections:** If a section is not in the map or has an empty roles array, it is inaccessible to everyone except `GLOBAL_ADMIN`
+- **Frontend:** Tabs are rendered based on the `permissions` array returned by `GET /operator/auth/permissions`. The auth context in `platform/operator/src/App.tsx` fetches this on login.
+- **Backend:** API routes still use `requireOperatorRole()` middleware for action-level enforcement.
+- **Adding a new section:**
+  1. Add the section + roles to `SECTION_PERMISSIONS` in `api/src/lib/operator-permissions.ts`
+  2. Add the tab button in `DashboardPage.tsx` gated by `permissions.includes('sectionId')`
+  3. Add the tab content rendering block
+  4. Protect backend routes with `requireOperatorRole(...)`
+  5. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`
+
 ### Key files for common tasks
 - Tenant resolution: `api/src/middleware/tenant.ts`
 - Auth & JWT: `api/src/middleware/auth.ts`
