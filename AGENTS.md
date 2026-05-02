@@ -7,10 +7,13 @@
 
 ## Project Overview
 
-Babything is a newborn tracking app for families and caregivers. It supports two deployment modes from a single codebase:
+Babything is a newborn tracking app for families and caregivers.
 
-- **Self-hosted** — Free, open-source, runs on your own hardware via Docker
-- **Cloud / SaaS** — Subscription-hosted with Stripe billing, custom subdomains, and automated SSL
+**This repository (`babything-cloud`) is the cloud/SaaS version.** It is a multi-tenant subscription service with Stripe billing, custom subdomains, and platform-managed infrastructure.
+
+For the free self-hosted version, see the [`babything-selfhosted`](https://github.com/ThatDavis/babything-selfhosted) repository.
+
+Shared feature changes flow from this repo (upstream) to the self-hosted fork via git merge. When adding a shared feature, implement it here first, then sync it downstream.
 
 Key docs to check before making changes:
 - **`REQUIREMENTS.md`** — Feature specs and user flows
@@ -61,10 +64,14 @@ Before starting any feature or refactor, assess size:
 
 ## Architecture Notes
 
-### Single codebase, dual mode
-The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MODE=selfhosted|cloud`:
-- **Self-hosted**: First registered user becomes admin. Global settings. SMTP + OAuth configurable.
-- **Cloud**: Multi-tenant via subdomain. Per-tenant settings. Platform-managed email and Google OAuth. No monitor tab.
+### Dual-repo architecture
+Babything is split into two repositories:
+- **`babything-cloud`** (this repo) — Multi-tenant SaaS. Subdomain routing, Stripe billing, operator dashboard, landing page, provisioning service.
+- **`babything-selfhosted`** — Single-tenant self-hosted. RTSP baby monitor, configurable SMTP, generic OAuth providers.
+
+Shared code (core API routes, frontend pages, Prisma schema) lives in both repos and is kept in sync via fork-and-merge from this repo (upstream) to the self-hosted fork.
+
+**When working on this repo:** You are building cloud-only features. Do not add self-hosted-only code paths (monitor, SMTP UI, generic OAuth providers). Those belong in the self-hosted fork.
 
 ### Service layout
 | Service | Path | Port | Purpose |
@@ -77,21 +84,15 @@ The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MOD
 
 ### Email delivery
 
-The mailer supports three providers in priority order:
+The mailer supports two providers in priority order:
 
 1. **Resend API** — `RESEND_API_KEY` env var set → uses Resend SDK
-   - Preferred for cloud deployments
+   - Primary provider for cloud deployments
    - `FROM_EMAIL` and `FROM_NAME` env vars control sender identity
 
 2. **Env-based SMTP** — `SMTP_HOST` env var set → uses `nodemailer`
-   - Works in both cloud and self-hosted modes
+   - Fallback when Resend is not configured
    - `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
-   - Useful for cloud if you prefer your own SMTP relay over Resend
-
-3. **DB-based SMTP** — configured via Admin Settings → SMTP tab
-   - Self-hosted only (cloud hides the SMTP UI)
-   - Stored in `SmtpConfig` table
-   - Falls back to this when neither Resend nor env SMTP is configured
 
 If no provider is configured, transactional emails silently fail (best-effort) except for report emails which require a configured provider.
 

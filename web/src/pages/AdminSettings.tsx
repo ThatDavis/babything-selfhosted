@@ -14,11 +14,7 @@ export default function AdminSettings() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [section, setSection] = useState<Section>('general')
-  const [isCloud, setIsCloud] = useState(false)
-
-  useEffect(() => {
-    api.auth.config().then(c => setIsCloud(c.deploymentMode === 'cloud')).catch(() => {})
-  }, [])
+  const isCloud = true
 
   if (!user?.isAdmin) {
     return (
@@ -39,9 +35,8 @@ export default function AdminSettings() {
         <div className="flex gap-2 border-b border-stone-200 pb-2 flex-wrap">
           {([
             'general',
-            ...(isCloud ? [] : ['stream', 'smtp', 'oauth']),
             'users',
-            ...(isDev && !isCloud ? ['dev'] : []),
+            ...(isDev ? ['dev'] : []),
           ] as Section[]).map(s => (
             <button key={s} onClick={() => setSection(s)}
               className={`px-4 py-2 rounded-t-lg text-sm font-medium capitalize transition-colors ${section === s ? 'bg-white border border-b-white border-stone-200 -mb-px text-brand-600' : 'text-stone-500 hover:text-stone-700'}`}>
@@ -51,11 +46,8 @@ export default function AdminSettings() {
         </div>
 
         {section === 'general' && <GeneralSection />}
-        {section === 'stream' && !isCloud && <StreamSection />}
-        {section === 'smtp' && !isCloud && <SmtpSection />}
-        {section === 'oauth' && !isCloud && <OAuthSection />}
         {section === 'users' && <UsersSection />}
-        {section === 'dev' && !isCloud && <DevSection />}
+        {section === 'dev' && <DevSection />}
       </div>
     </div>
   )

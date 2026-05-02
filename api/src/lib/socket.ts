@@ -2,7 +2,6 @@ import { Server } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import { prisma } from './prisma.js'
-import { isSelfHosted } from './mode.js'
 import { runWithTenantAsync, type TenantInfo } from './tenant-context.js'
 import { extractSubdomain } from './subdomain.js'
 
@@ -15,16 +14,6 @@ function parseCookie(header: string | undefined, name: string): string | undefin
 }
 
 async function resolveSocketTenant(host: string): Promise<TenantInfo> {
-  if (isSelfHosted()) {
-    let tenant = await prisma.tenant.findUnique({ where: { id: 'default' } })
-    if (!tenant) {
-      tenant = await prisma.tenant.create({
-        data: { id: 'default', subdomain: 'default', status: 'ACTIVE', plan: 'SELFHOSTED' },
-      })
-    }
-    return tenant
-  }
-
   const subdomain = extractSubdomain(host)
   if (!subdomain) throw new Error('Tenant not found')
   const tenant = await prisma.tenant.findUnique({ where: { subdomain } })
