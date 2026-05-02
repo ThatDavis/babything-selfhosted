@@ -2,9 +2,7 @@ import { Server } from 'socket.io'
 import { Server as HttpServer } from 'http'
 import jwt from 'jsonwebtoken'
 import { prisma } from './prisma.js'
-import { isSelfHosted } from './mode.js'
 import { runWithTenantAsync, type TenantInfo } from './tenant-context.js'
-import { extractSubdomain } from './subdomain.js'
 
 let _io: Server | null = null
 
@@ -14,22 +12,13 @@ function parseCookie(header: string | undefined, name: string): string | undefin
   return match ? decodeURIComponent(match[1]) : undefined
 }
 
-async function resolveSocketTenant(host: string): Promise<TenantInfo> {
-  if (isSelfHosted()) {
-    let tenant = await prisma.tenant.findUnique({ where: { id: 'default' } })
-    if (!tenant) {
-      tenant = await prisma.tenant.create({
-        data: { id: 'default', subdomain: 'default', status: 'ACTIVE', plan: 'SELFHOSTED' },
-      })
-    }
-    return tenant
+async function resolveSocketTenant(): Promise<TenantInfo> {
+  let tenant = await prisma.tenant.findUnique({ where: { id: 'default' } })
+  if (!tenant) {
+    tenant = await prisma.tenant.create({
+      data: { id: 'default', subdomain: 'default', status: 'ACTIVE', plan: 'SELFHOSTED' },
+    })
   }
-
-  const subdomain = extractSubdomain(host)
-  if (!subdomain) throw new Error('Tenant not found')
-  const tenant = await prisma.tenant.findUnique({ where: { subdomain } })
-  if (!tenant) throw new Error('Tenant not found')
-  if (tenant.status === 'SUSPENDED') throw new Error('Tenant suspended')
   return tenant
 }
 
@@ -46,8 +35,7 @@ export function initSocket(httpServer: HttpServer) {
       const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string }
       socket.data.userId = payload.sub
 
-      const host = socket.handshake.headers.host ?? ''
-      const tenant = await resolveSocketTenant(host)
+      const tenant = await resolveSocketTenant()
       socket.data.tenantId = tenant.id
       socket.data.tenant = tenant
 

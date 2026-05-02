@@ -22,9 +22,6 @@ services:
     volumes:
       - ./mediamtx.yml:/mediamtx.yml:ro
     environment:
-      # Path "cam" source is set from .env; falls back to a placeholder so
-      # mediamtx starts cleanly even before a URL is configured.
-      # sourceOnDemand means mediamtx only connects when someone is watching.
       MTX_PATHS_CAM_SOURCE: ${CAMERA_RTSP_URL:-rtsp://127.0.0.1/not-configured}
       MTX_PATHS_CAM_SOURCEONDEMAND: "yes"
       MTX_PATHS_CAM_SOURCEONDEMANDCLOSEAFTER: 10s
@@ -46,6 +43,15 @@ services:
       CAMERA_RTSP_URL: ${CAMERA_RTSP_URL:-}
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-hello@babything.app}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Babything}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,43 +75,6 @@ services:
     volumes:
       - redis_data:/data
 
-  provisioning:
-    build:
-      context: ./platform/provisioning
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    networks: [backend]
-    environment:
-      PORT: 3002
-      DATABASE_URL: file:./provisioning.db
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
-      MAIN_APP_URL: http://api:3001
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
-    volumes:
-      - provisioning_data:/app/data
-    depends_on:
-      - api
-
-  landing:
-    build:
-      context: ./platform/landing
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    networks: [frontend]
-    depends_on:
-      - provisioning
-
-  operator:
-    build:
-      context: ./platform/operator
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    networks: [frontend]
-    depends_on:
-      - api
-
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -114,15 +83,12 @@ services:
       - "${PORT:-80}:80"
       # - "${TLS_PORT:-443}:443"  # uncomment when TLS certs are configured
     volumes:
-      - ./nginx/nginx.cloud.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       # - ./certs:/etc/nginx/certs:ro  # uncomment when TLS certs are configured
     depends_on:
       - api
       - web
       - mediamtx
-      - provisioning
-      - landing
-      - operator
 
 networks:
   frontend:
@@ -130,5 +96,4 @@ networks:
 
 volumes:
   postgres_data:
-  provisioning_data:
   redis_data:

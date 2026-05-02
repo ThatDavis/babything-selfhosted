@@ -7,10 +7,13 @@
 
 ## Project Overview
 
-Babything is a newborn tracking app for families and caregivers. It supports two deployment modes from a single codebase:
+Babything is a newborn tracking app for families and caregivers.
 
-- **Self-hosted** — Free, open-source, runs on your own hardware via Docker
-- **Cloud / SaaS** — Subscription-hosted with Stripe billing, custom subdomains, and automated SSL
+**This repository (`babything-selfhosted`) is the free self-hosted version.** Run it on your own hardware with Docker — no subscription, no cloud, your data stays with you.
+
+For the cloud/SaaS version with Stripe billing and custom subdomains, see the [`babything-cloud`](https://github.com/ThatDavis/babything-cloud) repository.
+
+Shared feature changes flow from the cloud repo (upstream) to this repo via git merge. When syncing, resolve conflicts in mode-specific files (`api/src/lib/mode.ts`, `api/src/index.ts`, `web/src/pages/AdminSettings.tsx`, `docker-compose.yml`, `.env.example`, docs) in favor of self-hosted.
 
 Key docs to check before making changes:
 - **`REQUIREMENTS.md`** — Feature specs and user flows
@@ -61,10 +64,14 @@ Before starting any feature or refactor, assess size:
 
 ## Architecture Notes
 
-### Single codebase, dual mode
-The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MODE=selfhosted|cloud`:
-- **Self-hosted**: First registered user becomes admin. Global settings. SMTP + OAuth configurable.
-- **Cloud**: Multi-tenant via subdomain. Per-tenant settings. Platform-managed email and Google OAuth. No monitor tab.
+### Dual-repo architecture
+Babything is split into two repositories:
+- **`babything-cloud`** (upstream) — Multi-tenant SaaS. Subdomain routing, Stripe billing, operator dashboard, landing page, provisioning service.
+- **`babything-selfhosted`** (this repo) — Single-tenant self-hosted. RTSP baby monitor, configurable SMTP, generic OAuth providers.
+
+Shared code (core API routes, frontend pages, Prisma schema) is kept in sync via fork-and-merge from the cloud repo (upstream) to this repo.
+
+**When working on this repo:** You are building self-hosted-only features or syncing shared features from upstream. Do not add cloud-only code paths (Stripe, tenant subdomain resolution, operator dashboard, Resend email). Those belong in the cloud repo.
 
 ### Service layout
 | Service | Path | Port | Purpose |
@@ -77,58 +84,33 @@ The `api/` and `web/` services support both deployment modes via `DEPLOYMENT_MOD
 
 ### Email delivery
 
-The mailer supports three providers in priority order:
+The mailer supports two SMTP providers in priority order:
 
-1. **Resend API** — `RESEND_API_KEY` env var set → uses Resend SDK
-   - Preferred for cloud deployments
-   - `FROM_EMAIL` and `FROM_NAME` env vars control sender identity
-
-2. **Env-based SMTP** — `SMTP_HOST` env var set → uses `nodemailer`
-   - Works in both cloud and self-hosted modes
+1. **Env-based SMTP** — `SMTP_HOST` env var set → uses `nodemailer`
    - `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
-   - Useful for cloud if you prefer your own SMTP relay over Resend
 
-3. **DB-based SMTP** — configured via Admin Settings → SMTP tab
-   - Self-hosted only (cloud hides the SMTP UI)
+2. **DB-based SMTP** — configured via Admin Settings → SMTP tab
    - Stored in `SmtpConfig` table
-   - Falls back to this when neither Resend nor env SMTP is configured
+   - Falls back to this when env SMTP is not configured
 
 If no provider is configured, transactional emails silently fail (best-effort) except for report emails which require a configured provider.
 
 ### Email templates
-All transactional emails are driven by the `EmailTemplate` table (`api/prisma/schema.prisma`).
+Transactional emails use hardcoded default templates in `api/src/lib/mailer.ts`.
 
 - **Template names:** `welcome`, `invite`, `password_reset`, `report`
 - **Variable syntax:** `{{variableName}}` — plain string substitution in `api/src/lib/mailer.ts`
-- **Fallback behavior:** If no custom template exists in the DB, the mailer falls back to hardcoded defaults
-- **Operator editing:** Global admins can edit templates via the **Email Templates** tab in the operator dashboard (`platform/operator/src/pages/DashboardPage.tsx`)
 - **Adding a new email type:**
   1. Add a `sendXEmail` function in `api/src/lib/mailer.ts` using `sendEmail`
-  2. Add the template name + variables to the built-in list in `TemplatesTab`
-  3. Add a default template in the fallback object
-  4. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`
+  2. Add a default template in the fallback object
+  3. Update `PROGRESS.md`
 
-### Operator dashboard permissions
-Sections (tabs) in the operator dashboard are config-driven via `api/src/lib/operator-permissions.ts`.
 
-- **Config:** `SECTION_PERMISSIONS` maps section IDs (`tenants`, `audit`, `operators`, `discounts`, `templates`) to arrays of allowed `OperatorRole`
-- **Global admin bypass:** `GLOBAL_ADMIN` always has access to all sections regardless of the config
-- **Unassigned sections:** If a section is not in the map or has an empty roles array, it is inaccessible to everyone except `GLOBAL_ADMIN`
-- **Frontend:** Tabs are rendered based on the `permissions` array returned by `GET /operator/auth/permissions`. The auth context in `platform/operator/src/App.tsx` fetches this on login.
-- **Backend:** API routes still use `requireOperatorRole()` middleware for action-level enforcement.
-- **Adding a new section:**
-  1. Add the section + roles to `SECTION_PERMISSIONS` in `api/src/lib/operator-permissions.ts`
-  2. Add the tab button in `DashboardPage.tsx` gated by `permissions.includes('sectionId')`
-  3. Add the tab content rendering block
-  4. Protect backend routes with `requireOperatorRole(...)`
-  5. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`
 
 ### Key files for common tasks
 - Tenant resolution: `api/src/middleware/tenant.ts`
 - Auth & JWT: `api/src/middleware/auth.ts`
 - Admin routes: `api/src/routes/admin.ts`
-- Internal API (provisioning ↔ main app): `api/src/routes/internal.ts`
 - Prisma schema: `api/prisma/schema.prisma`
-- Landing API client: `platform/landing/src/lib/api.ts`
 - Email sending & templates: `api/src/lib/mailer.ts`
  

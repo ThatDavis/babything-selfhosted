@@ -1,6 +1,4 @@
 import http from 'http'
-import https from 'https'
-import fs from 'fs'
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
@@ -22,10 +20,6 @@ import appointmentsRouter from './routes/appointments.js'
 import vaccinesRouter from './routes/vaccines.js'
 import statsRouter from './routes/stats.js'
 import reportsRouter from './routes/reports.js'
-import internalRouter from './routes/internal.js'
-import operatorAuthRouter from './routes/operator-auth.js'
-import operatorsRouter from './routes/operators.js'
-import operatorDashboardRouter from './routes/operator-dashboard.js'
 
 // Validate secrets before booting
 function validateSecrets() {
@@ -67,12 +61,7 @@ app.use(express.json({ limit: '100kb' }))
 // Health check runs before tenant resolution so it works even if DB is unreachable
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
-// Operator routes (global, no tenant needed) — mounted BEFORE tenant resolver
-app.use('/operator/auth', operatorAuthRouter)
-app.use('/operator', operatorsRouter)
-app.use('/operator/dashboard', operatorDashboardRouter)
-
-// Tenant resolution middleware (subdomain → tenant, or default tenant in self-hosted)
+// Tenant resolution middleware (creates default tenant in self-hosted)
 app.use(tenantResolver)
 
 // Rate limiting for authentication endpoints
@@ -89,7 +78,6 @@ app.use('/auth/register', authLimiter)
 app.use('/auth/forgot-password', authLimiter)
 app.use('/auth/reset-password', authLimiter)
 app.use('/auth/oauth/google/start', authLimiter)
-app.use('/operator/auth/login', authLimiter)
 
 app.use('/auth', authRouter)
 app.use('/admin', adminRouter)
@@ -105,27 +93,6 @@ app.use('/babies/:babyId/appointments', appointmentsRouter)
 app.use('/babies/:babyId/vaccines', vaccinesRouter)
 app.use('/babies/:babyId/stats', statsRouter)
 app.use('/babies/:babyId', reportsRouter)
-app.use('/internal', internalRouter)
 
 const port = Number(process.env.PORT ?? 3001)
 httpServer.listen(port, () => console.log(`api listening on :${port}`))
-
-// Optional mTLS server for internal service-to-service communication
-const mtlsEnabled = process.env.MTLS_ENABLED === 'true'
-if (mtlsEnabled) {
-  const mtlsPort = Number(process.env.MTLS_PORT ?? 3003)
-  const certPath = process.env.TLS_CERT_PATH ?? '/certs/api-server.crt'
-  const keyPath = process.env.TLS_KEY_PATH ?? '/certs/api-server.key'
-  const caPath = process.env.TLS_CA_PATH ?? '/certs/ca.crt'
-
-  const tlsOptions: https.ServerOptions = {
-    cert: fs.readFileSync(certPath),
-    key: fs.readFileSync(keyPath),
-    ca: fs.readFileSync(caPath),
-    requestCert: true,
-    rejectUnauthorized: true,
-  }
-
-  const mtlsServer = https.createServer(tlsOptions, app)
-  mtlsServer.listen(mtlsPort, () => console.log(`api mTLS listening on :${mtlsPort}`))
-}

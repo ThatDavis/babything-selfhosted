@@ -1,3 +1,3 @@
-export const DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE ?? 'selfhosted'
-export const isCloud = () => DEPLOYMENT_MODE === 'cloud'
-export const isSelfHosted = () => DEPLOYMENT_MODE !== 'cloud'
+// Self-hosted-only build — no runtime mode switching
+export const isCloud = () => false
+export const isSelfHosted = () => true

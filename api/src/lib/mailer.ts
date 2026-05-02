@@ -1,21 +1,8 @@
-import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
 import { prisma } from './prisma.js'
 import { decryptOptional } from './crypto.js'
 
-// ── Provider 1: Resend (cloud, preferred) ──────────────────
-const resendApiKey = process.env.RESEND_API_KEY
-const fromEmail = process.env.FROM_EMAIL ?? 'hello@babything.app'
-const fromName = process.env.FROM_NAME ?? 'Babything'
-
-function getResendClient() {
-  if (!resendApiKey) return null
-  return new Resend(resendApiKey)
-}
-
-const resendClient = getResendClient()
-
-// ── Provider 2: Env-based SMTP (cloud or self-hosted) ──────
+// ── Provider 1: Env-based SMTP ─────────────────────────────
 function getEnvSmtpTransport() {
   const host = process.env.SMTP_HOST
   if (!host) return null
@@ -58,45 +45,17 @@ function interpolate(template: string, vars: Record<string, string>) {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => vars[key] ?? '')
 }
 
-async function renderTemplate(
-  name: string,
-  vars: Record<string, string>
-): Promise<{ subject: string; html: string } | null> {
-  const tpl = await prisma.emailTemplate.findUnique({ where: { name } })
-  if (!tpl) return null
-  return {
-    subject: interpolate(tpl.subject, vars),
-    html: interpolate(tpl.htmlBody, vars),
-  }
-}
-
 async function sendEmail(
   to: string,
-  templateName: string,
+  _templateName: string,
   vars: Record<string, string>,
   defaults: { subject: string; html: string },
   opts?: { attachments?: any[]; requireTransport?: boolean }
 ) {
-  const rendered = await renderTemplate(templateName, vars)
-  const subject = rendered?.subject ?? interpolate(defaults.subject, vars)
-  const html = rendered?.html ?? interpolate(defaults.html, vars)
+  const subject = interpolate(defaults.subject, vars)
+  const html = interpolate(defaults.html, vars)
 
-  // 1. Try Resend first (cloud preferred)
-  if (resendClient) {
-    await resendClient.emails.send({
-      from: `${fromName} <${fromEmail}>`,
-      to,
-      subject,
-      html,
-      attachments: opts?.attachments?.map(a => ({
-        filename: a.filename,
-        content: a.content,
-      })),
-    })
-    return
-  }
-
-  // 2. Try env-based SMTP
+  // 1. Try env-based SMTP
   const envTransport = getEnvSmtpTransport()
   if (envTransport) {
     await envTransport.sendMail({
@@ -109,7 +68,7 @@ async function sendEmail(
     return
   }
 
-  // 3. Try DB-based SMTP (self-hosted UI config)
+  // 2. Try DB-based SMTP (self-hosted UI config)
   const dbTransport = await getDbSmtpTransport()
   if (dbTransport) {
     await dbTransport.sendMail({
@@ -311,16 +270,6 @@ export async function sendTemplateTestEmail(
 
 // ── Test email ─────────────────────────────────────────────
 export async function sendTestEmail(to: string) {
-  if (resendClient) {
-    await resendClient.emails.send({
-      from: `${fromName} <${fromEmail}>`,
-      to,
-      subject: 'Babything — Email test',
-      text: 'Cloud email is configured correctly.',
-    })
-    return
-  }
-
   const envTransport = getEnvSmtpTransport()
   if (envTransport) {
     await envTransport.verify()

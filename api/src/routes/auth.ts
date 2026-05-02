@@ -11,8 +11,6 @@ import { sendInviteEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../li
 import { decryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 import { getTenantId } from '../lib/tenant-context.js'
-import { isCloud } from '../lib/mode.js'
-import { extractSubdomain } from '../lib/subdomain.js'
 
 const router = Router()
 
@@ -299,8 +297,8 @@ router.get('/invite/:token', async (req, res) => {
 router.get('/config', async (_req, res) => {
   res.json({
     googleEnabled: !!process.env.GOOGLE_CLIENT_ID,
-    deploymentMode: process.env.DEPLOYMENT_MODE ?? 'selfhosted',
-    cookieDomain: process.env.COOKIE_DOMAIN ?? null,
+    deploymentMode: 'selfhosted',
+    cookieDomain: null,
   })
 })
 
@@ -310,20 +308,9 @@ router.get('/oauth/google/start', (req, res, next) => {
     res.status(404).json({ error: 'Google OAuth not configured' })
     return
   }
-  let state: string | undefined
-  if (isCloud()) {
-    const host = req.headers.host ?? ''
-    const subdomain = extractSubdomain(host)
-    if (!subdomain) {
-      res.status(400).json({ error: 'Tenant subdomain required' })
-      return
-    }
-    state = jwt.sign({ subdomain }, process.env.INVITE_SECRET!, { expiresIn: '10m' })
-  }
   passport.authenticate('google', {
     scope: ['profile', 'email'],
     prompt: 'select_account',
-    ...(state ? { state } : {}),
   })(req, res, next)
 })
 

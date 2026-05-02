@@ -1,10 +1,10 @@
-# babything
+# babything-selfhosted
 
 A newborn tracking app for families and caregivers. Log feedings, diapers, sleep, growth, medications, vaccines, and milestones. Share access with partners, grandparents, or anyone helping care for the baby.
 
-**Two deployment modes:**
-- **Self-hosted** — Run on your own hardware with Docker (single family)
-- **Cloud / SaaS** — Multi-tenant subscription hosting with Stripe billing, custom subdomains, and automated SSL
+**This is the free self-hosted repository.** Run it on your own hardware with Docker — no subscription, no cloud, your data stays with you.
+
+For the cloud/SaaS version with Stripe billing and custom subdomains, see [`babything-cloud`](https://github.com/ThatDavis/babything-cloud).
 
 ---
 
@@ -42,8 +42,8 @@ A newborn tracking app for families and caregivers. Log feedings, diapers, sleep
 
 **1. Clone the repo**
 ```bash
-git clone https://github.com/yourname/babything.git
-cd babything
+git clone https://github.com/ThatDavis/babything-selfhosted.git
+cd babything-selfhosted
 ```
 
 **2. Create your `.env` file**
@@ -168,27 +168,14 @@ If you're putting babything behind an existing nginx, Caddy, or Traefik instance
 
 ---
 
-## Cloud / SaaS
-
-Babything also runs as a multi-tenant SaaS with:
-- Custom subdomains (`yourfamily.babything.app`)
-- Stripe subscription billing (monthly & annual plans)
-- Automated SSL via Let's Encrypt
-- Referral program ("give a week, get a week")
-- Affiliate program integration
-
-See [`DEPLOYMENT.md`](DEPLOYMENT.md) for full cloud deployment instructions.
-
----
-
 ## Tech stack
 
 | Layer | What |
 |-------|------|
 | API | Node.js, Express, TypeScript, Prisma |
-| Database | PostgreSQL (app), SQLite (provisioning) |
+| Database | PostgreSQL |
 | Frontend | React, Vite, Tailwind CSS |
 | Real-time | Socket.io |
 | Media | mediamtx (RTSP → HLS) |
-| Reverse proxy | Nginx (self-hosted), Traefik (cloud) |
+| Reverse proxy | Nginx |
 | Deployment | Docker Compose |
