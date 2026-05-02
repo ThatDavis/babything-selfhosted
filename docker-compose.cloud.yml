@@ -106,6 +106,7 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
       STRIPE_ANNUAL_PRICE_ID: ${STRIPE_ANNUAL_PRICE_ID}
+      STRIPE_BYPASS: ${STRIPE_BYPASS:-}
       MAIN_APP_URL: https://api:3003
       MTLS_ENABLED: "true"
       TLS_CERT_PATH: /certs/provisioning-client.crt

@@ -7,6 +7,11 @@ const router = Router()
 
 // Create a Stripe Customer Portal session for managing subscriptions
 router.post('/portal-session', async (req, res) => {
+  if (process.env.STRIPE_BYPASS === 'true') {
+    res.status(400).json({ error: 'Billing is disabled in bypass mode' })
+    return
+  }
+
   const { subdomain } = req.body
   if (!subdomain || typeof subdomain !== 'string') {
     res.status(400).json({ error: 'subdomain is required' })
@@ -33,6 +38,11 @@ router.post('/portal-session', async (req, res) => {
 
 // Cancel subscription immediately (sets to cancel at period end)
 router.post('/cancel', async (req, res) => {
+  if (process.env.STRIPE_BYPASS === 'true') {
+    res.status(400).json({ error: 'Billing is disabled in bypass mode' })
+    return
+  }
+
   const { subdomain } = req.body
   if (!subdomain || typeof subdomain !== 'string') {
     res.status(400).json({ error: 'subdomain is required' })
