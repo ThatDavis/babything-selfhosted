@@ -26,12 +26,14 @@ Otherwise, use `$ARGUMENTS` as the feature description. Ask 1–2 clarifying que
 
 Keep questions minimal — don't over-interrogate.
 
-## Step 2 — Check for conflicts or dependencies
+## Step 2 — Check for conflicts, dependencies, and conventions
 
-Read `REQUIREMENTS.md`, `PROGRESS.md`, and `SUBSCRIPTION_ROADMAP.md`. Confirm:
+Read `REQUIREMENTS.md`, `PROGRESS.md`, `SUBSCRIPTION_ROADMAP.md`, and **`AGENTS.md`**. Confirm:
 - This feature doesn't contradict existing requirements
 - Any prerequisites are already complete (if not, flag them)
+- The feature aligns with project conventions in `AGENTS.md` (coding style, architecture patterns, git workflow)
 - If the feature touches cloud architecture, billing, or tenant lifecycle, also check `SUBSCRIPTION_ROADMAP.md` for conflicts
+- Pay special attention to the **Architecture Notes** section in `AGENTS.md` — new features should fit existing patterns (e.g., email templates, tenant resolution, auth flows)
 
 ## Step 3 — Update progress documents
 
@@ -57,13 +59,14 @@ Build the feature now, following these principles:
 - If a UI is involved, verify it visually before finishing
 - **Commit silently and incrementally** — after each significant sub-task or logical chunk of work, stage and commit automatically per the `Development Workflow` in `AGENTS.md`. Do not announce these micro-commits to the user.
 
-## Step 5 — Update progress and save
+## Step 5 — Update progress, docs, and save
 
 1. Mark the new feature's sub-tasks complete in **`PROGRESS.md`** as they are done. Update the `Last updated:` date.
 2. If the feature touches cloud architecture, billing, or subscription mechanics, update **`SUBSCRIPTION_ROADMAP.md`** to reflect the new status. Keep the two docs consistent with each other.
-3. Run `/save-progress` logic: commit any remaining uncommitted changes with a clear message. This is the user-visible checkpoint.
+3. **If the feature changes the architecture, conventions, or introduces a new pattern** (new models, new services, new auth flows, new deployment steps), update **`AGENTS.md`** so future agents are aware of it. Add to the **Architecture Notes** or **Key files** sections as appropriate.
+4. Run `/save-progress` logic: commit any remaining uncommitted changes with a clear message. This is the user-visible checkpoint.
    - If you already committed incrementally during Step 4, this may just be a small final commit or nothing at all.
-4. If a feature branch was created in Step 0, push it to the remote and **open a Pull Request** for human review. Do not merge locally.
+5. If a feature branch was created in Step 0, push it to the remote and **open a Pull Request** for human review. Do not merge locally.
    - PR title: same as the feature name or final commit message
    - PR description: summarize what changed, why, which files were touched, and any testing done
    - Provide the user with the branch name and a link (or instructions) to open the PR in their git web interface
