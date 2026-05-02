@@ -1,21 +1,21 @@
 /**
  * Bootstrap script: create the first operator account.
  *
- * Usage:
- *   npx tsx scripts/create-operator.ts <email> <name> <password> <role>
+ * Usage (inside the API container):
+ *   node dist/scripts/create-operator.js <email> <name> <password> <role>
  *
  * Example:
- *   npx tsx scripts/create-operator.ts admin@example.com "Admin User" "SecurePass123!" GLOBAL_ADMIN
+ *   node dist/scripts/create-operator.js admin@example.com "Admin User" "SecurePass123!" GLOBAL_ADMIN
  */
 
 import bcrypt from 'bcryptjs'
-import { prisma } from '../src/lib/prisma.js'
+import { prisma } from '../lib/prisma.js'
 
 async function main() {
   const [email, name, password, role] = process.argv.slice(2)
 
   if (!email || !name || !password || !role) {
-    console.error('Usage: npx tsx scripts/create-operator.ts <email> <name> <password> <role>')
+    console.error('Usage: node dist/scripts/create-operator.js <email> <name> <password> <role>')
     console.error('Roles: HELPDESK, ACCOUNTING, GLOBAL_ADMIN')
     process.exit(1)
   }
