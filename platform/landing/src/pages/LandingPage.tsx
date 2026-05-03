@@ -69,7 +69,7 @@ export default function LandingPage() {
           <div className="text-5xl mb-2">🌿</div>
           <h2 className="text-4xl font-serif text-stone-800">Track everything about your baby.</h2>
           <p className="text-lg text-stone-500 max-w-2xl mx-auto">
-            Feedings, diapers, sleep, growth, vaccines, medications, and milestones — all in one place.
+            Feedings, diapers, sleep, growth, vaccines, medications, and milestones - all in one place.
             Share with caregivers in real time.
           </p>
           <button onClick={() => navigate('/signup')} className="btn-primary text-lg">
@@ -102,7 +102,7 @@ export default function LandingPage() {
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {[
-              { icon: '🏠', title: 'Free forever', desc: 'The self-hosted version will always be free and open-source. Run it on your own hardware — even a Raspberry Pi.' },
+              { icon: '🏠', title: 'Free forever', desc: 'The self-hosted version will always be free and open-source. Run it on your own hardware - even a Raspberry Pi.' },
               { icon: '🔒', title: 'No tracking', desc: 'We do not track your behavior, show ads, or share your data with anyone. Ever.' },
               { icon: '🌱', title: 'Sustainable', desc: 'Cloud subscriptions help fund ongoing development, security updates, and new features.' },
             ].map(v => (
