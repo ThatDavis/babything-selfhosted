@@ -432,3 +432,15 @@ model Plan {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
+
+model MonitorAgent {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessionId   String   @unique
+  connectedAt DateTime @default(now())
+  lastPingAt  DateTime @updatedAt
+  status      String   @default("CONNECTED") // CONNECTED | DISCONNECTED
+
+  @@index([tenantId])
+}
