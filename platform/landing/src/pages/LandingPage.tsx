@@ -1,9 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, Plan } from '../lib/api'
-import AffiliateScript from '../components/AffiliateScript'
 
-const AFFILIATE_SIGNUP_URL = import.meta.env.VITE_AFFILIATE_SIGNUP_URL
 const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com/ThatDavis/babything-selfhosted'
 const DONATION_URL = import.meta.env.VITE_DONATION_URL
 
@@ -52,8 +50,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <AffiliateScript />
-
       <header className="bg-white border-b border-stone-100">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-xl font-serif text-brand-600">Babything</h1>
@@ -226,29 +222,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {AFFILIATE_SIGNUP_URL && (
-          <section className="text-center space-y-4">
-            <h2 className="text-2xl font-serif text-stone-800">Partner with us</h2>
-            <p className="text-stone-500 max-w-xl mx-auto">
-              Are you a blogger, pediatrician, or doula? Earn 20% recurring commission for every family you refer to Babything.
-            </p>
-            <a href={AFFILIATE_SIGNUP_URL} target="_blank" rel="noopener noreferrer" className="btn-ghost inline-block">
-              Become an affiliate →
-            </a>
-          </section>
-        )}
       </main>
 
       <footer className="border-t border-stone-100 py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-stone-400">
           <p>© {new Date().getFullYear()} Babything</p>
-          <div className="flex gap-6">
-            {AFFILIATE_SIGNUP_URL && (
-              <a href={AFFILIATE_SIGNUP_URL} target="_blank" rel="noopener noreferrer" className="hover:text-stone-600 transition-colors">
-                Affiliates
-              </a>
-            )}
-          </div>
         </div>
       </footer>
 
