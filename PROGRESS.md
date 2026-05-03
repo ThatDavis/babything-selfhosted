@@ -167,6 +167,10 @@ Building advanced features and hardening the platform.
   - [x] "Built for families, not for data" section with privacy + sustainability messaging
   - [x] Self-hosted card now mentions Raspberry Pi
   - [x] Privacy first feature card updated copy
+- [x] Legal pages
+  - [x] Terms of Service page (`/terms`) — privacy-focused, data deletion policy
+  - [x] GDPR Compliance page (`/gdpr`) — rights, retention, processors, complaints
+  - [x] Footer links on landing page
 - [ ] Monitor v2 for cloud (WebRTC)
 - [ ] Multi-region deployment
 
@@ -180,7 +184,7 @@ Building advanced features and hardening the platform.
 | Phase 2 — Full Tracking | ✅ Complete | 7/7 | 0 |
 | Phase 3 — Polish | ✅ Complete | 5/5 | 0 |
 | Phase 4 — Cloud | ✅ Complete | 13/13 | 0 |
-| Phase 5 — Growth | 🔵 In Progress | 16/18 | 2 |
+| Phase 5 — Growth | 🔵 In Progress | 17/19 | 2 |
 
 ---
 

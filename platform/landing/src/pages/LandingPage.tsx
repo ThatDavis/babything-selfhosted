@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { api, Plan } from '../lib/api'
 
 const GITHUB_REPO_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com/ThatDavis/babything-selfhosted'
@@ -227,6 +227,10 @@ export default function LandingPage() {
       <footer className="border-t border-stone-100 py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-stone-400">
           <p>© {new Date().getFullYear()} Babything</p>
+          <div className="flex gap-6">
+            <Link to="/terms" className="hover:text-stone-600 transition-colors">Terms</Link>
+            <Link to="/gdpr" className="hover:text-stone-600 transition-colors">GDPR</Link>
+          </div>
         </div>
       </footer>
 
