@@ -15,7 +15,7 @@ interface Props {
 export default function BabySettings({ baby, caregivers, onClose, onDeleted, onCaregiversChanged }: Props) {
   const { user } = useAuth()
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteLink, setInviteLink] = useState('')
+  const [inviteResult, setInviteResult] = useState<{ email: string; emailSent: boolean; inviteUrl: string } | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -31,11 +31,12 @@ export default function BabySettings({ baby, caregivers, onClose, onDeleted, onC
   async function generateInvite() {
     if (!inviteEmail) return
     setError('')
+    setInviteResult(null)
     setLoading(true)
     try {
-      const { inviteToken } = await api.auth.invite({ babyId: baby.id, email: inviteEmail })
+      const { inviteToken, emailSent } = await api.auth.invite({ babyId: baby.id, email: inviteEmail })
       const url = `${window.location.origin}/invite/${inviteToken}`
-      setInviteLink(url)
+      setInviteResult({ email: inviteEmail, emailSent, inviteUrl: url })
       setInviteEmail('')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to generate invite')
@@ -105,16 +106,25 @@ export default function BabySettings({ baby, caregivers, onClose, onDeleted, onC
                 {loading ? '…' : 'Invite'}
               </button>
             </div>
-            {inviteLink && (
+            {inviteResult && (
               <div className="mt-2 p-3 bg-stone-50 rounded-xl">
-                <p className="text-xs text-stone-500 mb-1">Share this link (expires in 7 days):</p>
-                <p className="text-xs font-mono break-all text-brand-600">{inviteLink}</p>
-                <button
-                  className="text-xs text-stone-400 mt-1 hover:text-stone-600"
-                  onClick={() => { navigator.clipboard.writeText(inviteLink); }}
-                >
-                  Copy to clipboard
-                </button>
+                {inviteResult.emailSent ? (
+                  <>
+                    <p className="text-sm font-medium text-green-700">Invite sent to {inviteResult.email} ✓</p>
+                    <p className="text-xs text-stone-400 mt-1">They'll receive an email with a link to join. Expires in 7 days.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-stone-500 mb-1">Email delivery isn't configured — share this link manually (expires in 7 days):</p>
+                    <p className="text-xs font-mono break-all text-brand-600">{inviteResult.inviteUrl}</p>
+                    <button
+                      className="text-xs text-stone-400 mt-1 hover:text-stone-600"
+                      onClick={() => { navigator.clipboard.writeText(inviteResult.inviteUrl); }}
+                    >
+                      Copy to clipboard
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

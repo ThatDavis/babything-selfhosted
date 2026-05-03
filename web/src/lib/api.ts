@@ -33,7 +33,7 @@ export const api = {
     logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
     me: () => request<User>('/auth/me'),
     invite: (body: { babyId: string; email: string; role?: string }) =>
-      request<{ inviteToken: string; expiresAt: string }>('/auth/invite', { method: 'POST', body: JSON.stringify(body) }),
+      request<{ inviteToken: string; expiresAt: string; emailSent: boolean }>('/auth/invite', { method: 'POST', body: JSON.stringify(body) }),
     getInvite: (token: string) =>
       request<{ babyId: string; babyName: string; email: string; role: string }>(`/auth/invite/${token}`),
     acceptInvite: (token: string) =>

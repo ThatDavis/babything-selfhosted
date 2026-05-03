@@ -265,14 +265,16 @@ router.post('/invite', requireAuth, async (req, res) => {
     prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
     prisma.baby.findUnique({ where: { id: babyId }, select: { name: true } }),
   ])
+  let emailSent = false
   try {
     await sendInviteEmail(email, baby?.name ?? 'your baby', inviter?.name ?? 'Someone', inviteUrl)
+    emailSent = true
   } catch {
     // Email sending is best-effort; the invite link is always returned
   }
 
-  audit(req, 'invite_sent', 'success', { actor: userId, target: email, details: { babyId, role } })
-  res.json({ inviteToken: token, expiresAt, inviteUrl })
+  audit(req, 'invite_sent', 'success', { actor: userId, target: email, details: { babyId, role, emailSent } })
+  res.json({ inviteToken: token, expiresAt, inviteUrl, emailSent })
 })
 
 router.post('/invite/:token/accept', requireAuth, async (req, res) => {
