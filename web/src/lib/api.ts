@@ -153,6 +153,20 @@ export const api = {
     save: (body: Partial<Pick<AppSettings, 'unitSystem' | 'streamEnabled'>>) =>
       request<AppSettings>('/admin/settings', { method: 'PUT', body: JSON.stringify(body) }),
   },
+  monitor: {
+    status: () => request<{ connected: boolean; connectedAt?: string }>('/monitor/status'),
+    token: () => request<{ token: string }>('/monitor/token', { method: 'POST' }),
+    config: () => request<{ iceServers: RTCIceServer[] }>('/monitor/config'),
+    watch: () => request<{ watchId: string }>('/monitor/watch', { method: 'POST' }),
+    offer: (watchId: string, sdp: string) =>
+      request<{ ok: boolean }>(`/monitor/watch/${watchId}/offer`, { method: 'POST', body: JSON.stringify({ sdp }) }),
+    pollAnswer: (watchId: string) =>
+      request<{ sdp: string }>(`/monitor/watch/${watchId}/answer`),
+    sendIce: (watchId: string, candidate: RTCIceCandidateInit) =>
+      request<{ ok: boolean }>(`/monitor/watch/${watchId}/ice`, { method: 'POST', body: JSON.stringify({ candidate }) }),
+    pollIce: (watchId: string) =>
+      request<{ candidates: RTCIceCandidateInit[] }>(`/monitor/watch/${watchId}/ice`),
+  },
   stats: {
     get: (babyId: string) => request<Stats>(`/babies/${babyId}/stats`),
   },

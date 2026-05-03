@@ -66,6 +66,9 @@ services:
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-hello@babything.app}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Babything}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      TURN_URL: ${TURN_URL:-}
+      TURN_USERNAME: ${TURN_USERNAME:-}
+      TURN_CREDENTIAL: ${TURN_CREDENTIAL:-}
       MTLS_ENABLED: "true"
       MTLS_PORT: 3003
       TLS_CERT_PATH: /certs/api-server.crt
@@ -145,6 +148,38 @@ services:
       - landing
       - provisioning
       - operator
+
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    networks: [backend]
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "5349:5349/tcp"
+      - "5349:5349/udp"
+      - "10000-10100:10000-10100/udp"
+    environment:
+      TURN_USERNAME: ${TURN_USERNAME:-babything}
+      TURN_PASSWORD: ${TURN_PASSWORD:-change-me-in-production}
+    command: >
+      -n
+      --listening-port=3478
+      --tls-listening-port=5349
+      --listening-ip=0.0.0.0
+      --relay-ip=0.0.0.0
+      --external-ip=${EXTERNAL_IP:-0.0.0.0}
+      --realm=${ROOT_DOMAIN:-babything.app}
+      --server-name=${ROOT_DOMAIN:-babything.app}
+      --user=${TURN_USERNAME:-babything}:${TURN_PASSWORD:-change-me-in-production}
+      --lt-cred-mech
+      --no-cli
+      --no-tlsv1
+      --no-tlsv1_1
+      --fingerprint
+      --log-file=stdout
+      --min-port=10000
+      --max-port=10100
 
 volumes:
   postgres_data:

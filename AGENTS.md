@@ -124,6 +124,25 @@ Sections (tabs) in the operator dashboard are config-driven via `api/src/lib/ope
   4. Protect backend routes with `requireOperatorRole(...)`
   5. Update `PROGRESS.md` and `SUBSCRIPTION_ROADMAP.md`
 
+### Cloud Baby Monitor (WebRTC)
+
+The cloud monitor uses a **local agent** (`babything-agent`) running on the user's network to bridge their RTSP camera to the cloud via WebRTC.
+
+**Architecture:**
+1. **Agent** (Go + Pion WebRTC + ffmpeg) connects to cloud via WebSocket at `/monitor/agent`
+2. **Browser** opens Monitor tab, creates WebRTC offer, sends to API
+3. **Cloud API** relays signaling (offer/answer/ICE) between browser and agent
+4. **Media flows P2P** when possible, or through TURN relay (coturn) when NAT blocks it
+
+**Key files:**
+- API signaling routes: `api/src/routes/monitor.ts`
+- Frontend monitor tab: `web/src/pages/tabs/MonitorTab.tsx`
+- Agent repo: `../babything-agent/` (separate repo)
+- TURN server: `coturn` in `docker-compose.cloud.yml`
+
+**Agent env vars:** `CLOUD_URL`, `RTSP_URL`, `AGENT_TOKEN`
+**Admin token generation:** `POST /monitor/token` (admin only)
+
 ### Key files for common tasks
 - Tenant resolution: `api/src/middleware/tenant.ts`
 - Auth & JWT: `api/src/middleware/auth.ts`
@@ -132,4 +151,5 @@ Sections (tabs) in the operator dashboard are config-driven via `api/src/lib/ope
 - Prisma schema: `api/prisma/schema.prisma`
 - Landing API client: `platform/landing/src/lib/api.ts`
 - Email sending & templates: `api/src/lib/mailer.ts`
+- Cloud monitor signaling: `api/src/routes/monitor.ts`
  

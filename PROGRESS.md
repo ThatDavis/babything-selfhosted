@@ -171,7 +171,12 @@ Building advanced features and hardening the platform.
   - [x] Terms of Service page (`/terms`) — privacy-focused, data deletion policy
   - [x] GDPR Compliance page (`/gdpr`) — rights, retention, processors, complaints
   - [x] Footer links on landing page
-- [ ] Monitor v2 for cloud (WebRTC)
+- [x] Monitor v2 for cloud (WebRTC)
+  - [x] Prisma schema: `MonitorAgent` model
+  - [x] API signaling endpoints (token, status, offer/answer/ICE, agent WS)
+  - [x] Frontend WebRTC monitor tab
+  - [x] `babything-agent` Go binary (Pion + ffmpeg RTSP)
+  - [x] Optional coturn TURN server in docker-compose.cloud.yml
 - [ ] Multi-region deployment
 
 ---
