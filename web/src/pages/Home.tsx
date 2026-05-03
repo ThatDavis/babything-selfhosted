@@ -260,6 +260,12 @@ export default function Home() {
             {tab === 'vaccines' && <VaccinesTab babyId={activeBaby.id} babyDob={activeBaby.dob} />}
             {tab === 'milestones' && <MilestonesTab babyId={activeBaby.id} />}
             {tab === 'monitor' && <MonitorTab />}
+
+            <div className="pt-6 border-t border-stone-100 mt-6">
+              <p className="text-xs text-stone-400 text-center">
+                Babything is for informational and tracking purposes only. It does not provide medical advice, diagnosis, or treatment. Always consult your pediatrician or qualified healthcare provider for medical concerns.
+              </p>
+            </div>
           </main>
         )}
 

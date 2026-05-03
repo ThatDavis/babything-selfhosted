@@ -222,6 +222,11 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section className="text-center">
+          <p className="text-xs text-stone-400 max-w-xl mx-auto">
+            Babything is for informational and tracking purposes only. It does not provide medical advice, diagnosis, or treatment. Always consult your pediatrician or qualified healthcare provider for medical concerns.
+          </p>
+        </section>
       </main>
 
       <footer className="border-t border-stone-100 py-8">
