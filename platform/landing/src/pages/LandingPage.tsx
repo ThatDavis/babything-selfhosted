@@ -83,7 +83,7 @@ export default function LandingPage() {
             { icon: '📄', title: 'PDF reports', desc: 'Branded summaries for pediatrician visits.' },
             { icon: '📥', title: 'CSV export', desc: 'Download all your data at any time.' },
             { icon: '💉', title: 'Vaccine tracking', desc: 'CDC schedule with due/overdue status.' },
-            { icon: '🔒', title: 'Privacy first', desc: 'Your data stays on your subdomain, isolated.' },
+            { icon: '🔒', title: 'Privacy first', desc: 'No tracking, no ads, no data sharing. Your family stays yours.' },
             { icon: '📱', title: 'PWA ready', desc: 'Install on your phone like a native app.' },
           ].map(f => (
             <div key={f.title} className="card">
@@ -92,6 +92,27 @@ export default function LandingPage() {
               <p className="text-sm text-stone-500 mt-1">{f.desc}</p>
             </div>
           ))}
+        </section>
+
+        <section className="text-center space-y-6">
+          <h2 className="text-3xl font-serif text-stone-800">Built for families, not for data</h2>
+          <p className="text-stone-500 max-w-2xl mx-auto">
+            Babything was created as a simple, private alternative to apps that monetize your family's information.
+            The self-hosted version is free forever, and the cloud subscription exists only to keep development sustainable.
+          </p>
+          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            {[
+              { icon: '🏠', title: 'Free forever', desc: 'The self-hosted version will always be free and open-source. Run it on your own hardware — even a Raspberry Pi.' },
+              { icon: '🔒', title: 'No tracking', desc: 'We do not track your behavior, show ads, or share your data with anyone. Ever.' },
+              { icon: '🌱', title: 'Sustainable', desc: 'Cloud subscriptions help fund ongoing development, security updates, and new features.' },
+            ].map(v => (
+              <div key={v.title} className="card text-left">
+                <div className="text-2xl mb-2">{v.icon}</div>
+                <h3 className="font-semibold text-stone-700">{v.title}</h3>
+                <p className="text-sm text-stone-500 mt-1">{v.desc}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="text-center space-y-6">
@@ -179,6 +200,7 @@ export default function LandingPage() {
                 <li>✓ All tracking features</li>
                 <li>✓ Unlimited babies & caregivers</li>
                 <li>✓ Docker-based deployment</li>
+                <li>✓ Runs on a Raspberry Pi</li>
                 <li>✓ Own your data</li>
                 <li>✓ Optional donation</li>
               </ul>
