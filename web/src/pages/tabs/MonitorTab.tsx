@@ -284,8 +284,6 @@ export default function MonitorTab() {
   // Connecting or Playing state
   const statusDot = status === 'playing'
     ? 'bg-green-500'
-    : status === 'error'
-    ? 'bg-red-500'
     : 'bg-amber-400 animate-pulse'
 
   const statusText = status === 'playing'
@@ -344,12 +342,6 @@ export default function MonitorTab() {
           {pipActive ? 'Exit picture-in-picture' : 'Picture in picture'}
         </button>
 
-        {/* Reconnect */}
-        {status === 'error' && (
-          <button onClick={startStream} className="w-full py-2 rounded-xl text-sm font-medium border border-stone-200 text-stone-600 hover:border-stone-300">
-            Reconnect
-          </button>
-        )}
       </div>
     </div>
   )

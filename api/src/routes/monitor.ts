@@ -1,12 +1,24 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma.js'
 import { getTenantId } from '../lib/tenant-context.js'
-import { requireAuth } from '../middleware/auth.js'
-import type { Response } from 'express'
-import type { AuthRequest } from '../middleware/auth.js'
+import { requireAuth, type AuthRequest } from '../middleware/auth.js'
 import type { Server as HttpServer } from 'http'
 import WebSocket from 'ws'
+
+/* ── Local types (browser APIs are not in Node types) ─────── */
+interface IceCandidate {
+  candidate?: string
+  sdpMid?: string | null
+  sdpMLineIndex?: number | null
+  usernameFragment?: string | null
+}
+
+interface IceServer {
+  urls: string | string[]
+  username?: string
+  credential?: string
+}
 
 /* ── In-memory state ───────────────────────────────────────── */
 
@@ -22,8 +34,8 @@ interface WatchSession {
   tenantId: string
   offer?: string
   answer?: string
-  browserIce: RTCIceCandidateInit[]
-  agentIce: RTCIceCandidateInit[]
+  browserIce: IceCandidate[]
+  agentIce: IceCandidate[]
   createdAt: Date
   resolvers: Array<(value: unknown) => void>
 }
@@ -37,8 +49,9 @@ const watches = new Map<string, WatchSession>() // watchId -> session
 const router = Router()
 
 /** POST /monitor/token — Generate a 30-day agent token (admin only) */
-router.post('/token', requireAuth, async (req: AuthRequest, res: Response) => {
-  const user = await prisma.user.findUnique({ where: { id: req.userId } })
+router.post('/token', requireAuth, async (req, res) => {
+  const userId = (req as AuthRequest).userId
+  const user = await prisma.user.findUnique({ where: { id: userId } })
   if (!user?.isAdmin) {
     res.status(403).json({ error: 'Admin required' })
     return
@@ -53,7 +66,7 @@ router.post('/token', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 /** GET /monitor/status — Is an agent connected for this tenant? */
-router.get('/status', requireAuth, async (_req: AuthRequest, res: Response) => {
+router.get('/status', requireAuth, async (_req, res) => {
   const tenantId = getTenantId()!
   const sessionId = tenantAgents.get(tenantId)
   if (!sessionId) {
@@ -72,8 +85,8 @@ router.get('/status', requireAuth, async (_req: AuthRequest, res: Response) => {
 })
 
 /** GET /monitor/config — ICE servers for browser PeerConnection */
-router.get('/config', requireAuth, async (_req: AuthRequest, res: Response) => {
-  const iceServers: RTCIceServer[] = [
+router.get('/config', requireAuth, async (_req, res) => {
+  const iceServers: IceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
   ]
   const turnUrl = process.env.TURN_URL
@@ -88,7 +101,7 @@ router.get('/config', requireAuth, async (_req: AuthRequest, res: Response) => {
 })
 
 /** POST /monitor/watch — Start a new watch session */
-router.post('/watch', requireAuth, async (_req: AuthRequest, res: Response) => {
+router.post('/watch', requireAuth, async (_req, res) => {
   const tenantId = getTenantId()!
   const watchId = crypto.randomUUID()
   watches.set(watchId, {
@@ -111,7 +124,7 @@ router.post('/watch', requireAuth, async (_req: AuthRequest, res: Response) => {
 })
 
 /** POST /monitor/watch/:watchId/offer — Browser sends SDP offer */
-router.post('/watch/:watchId/offer', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/watch/:watchId/offer', requireAuth, async (req, res) => {
   const { watchId } = req.params
   const { sdp } = req.body
   const tenantId = getTenantId()!
@@ -135,7 +148,7 @@ router.post('/watch/:watchId/offer', requireAuth, async (req: AuthRequest, res: 
 })
 
 /** GET /monitor/watch/:watchId/answer — Browser long-polls for agent answer */
-router.get('/watch/:watchId/answer', requireAuth, async (req: AuthRequest, res: Response) => {
+router.get('/watch/:watchId/answer', requireAuth, async (req, res) => {
   const { watchId } = req.params
   const tenantId = getTenantId()!
 
@@ -154,8 +167,7 @@ router.get('/watch/:watchId/answer', requireAuth, async (req: AuthRequest, res: 
   const timeout = setTimeout(() => {
     if (resolved) return
     resolved = true
-    // Remove self from resolvers
-    watch.resolvers = watch.resolvers.filter(r => r !== resolve)
+    watch!.resolvers = watch!.resolvers.filter(r => r !== resolve)
     res.status(204).send()
   }, 10000)
 
@@ -163,7 +175,7 @@ router.get('/watch/:watchId/answer', requireAuth, async (req: AuthRequest, res: 
     if (resolved) return
     resolved = true
     clearTimeout(timeout)
-    watch.resolvers = watch.resolvers.filter(r => r !== resolve)
+    watch!.resolvers = watch!.resolvers.filter(r => r !== resolve)
     if (value && typeof value === 'string') {
       res.json({ sdp: value })
     } else {
@@ -178,7 +190,7 @@ router.get('/watch/:watchId/answer', requireAuth, async (req: AuthRequest, res: 
 })
 
 /** POST /monitor/watch/:watchId/ice — Browser sends ICE candidate */
-router.post('/watch/:watchId/ice', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/watch/:watchId/ice', requireAuth, async (req, res) => {
   const { watchId } = req.params
   const { candidate } = req.body
   const tenantId = getTenantId()!
@@ -202,7 +214,7 @@ router.post('/watch/:watchId/ice', requireAuth, async (req: AuthRequest, res: Re
 })
 
 /** GET /monitor/watch/:watchId/ice — Browser polls for agent ICE candidates */
-router.get('/watch/:watchId/ice', requireAuth, async (req: AuthRequest, res: Response) => {
+router.get('/watch/:watchId/ice', requireAuth, async (req, res) => {
   const { watchId } = req.params
   const tenantId = getTenantId()!
 
@@ -223,7 +235,7 @@ router.get('/watch/:watchId/ice', requireAuth, async (req: AuthRequest, res: Res
   const timeout = setTimeout(() => {
     if (resolved) return
     resolved = true
-    watch.resolvers = watch.resolvers.filter(r => r !== resolve)
+    watch!.resolvers = watch!.resolvers.filter(r => r !== resolve)
     res.json({ candidates: [] })
   }, 10000)
 
@@ -231,7 +243,7 @@ router.get('/watch/:watchId/ice', requireAuth, async (req: AuthRequest, res: Res
     if (resolved) return
     resolved = true
     clearTimeout(timeout)
-    watch.resolvers = watch.resolvers.filter(r => r !== resolve)
+    watch!.resolvers = watch!.resolvers.filter(r => r !== resolve)
     if (value && Array.isArray(value)) {
       res.json({ candidates: value })
     } else {
