@@ -4,8 +4,6 @@ A newborn tracking app for families and caregivers. Log feedings, diapers, sleep
 
 **This is the free self-hosted repository.** Run it on your own hardware with Docker — no subscription, no cloud, your data stays with you.
 
-For the cloud/SaaS version with Stripe billing and custom subdomains, see [`babything-cloud`](https://github.com/ThatDavis/babything-cloud).
-
 ---
 
 ## Features
