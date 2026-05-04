@@ -14,14 +14,12 @@ import VaccinesTab from './tabs/VaccinesTab'
 import HealthTab from './tabs/HealthTab'
 import MilestonesTab from './tabs/MilestonesTab'
 import MonitorTab from './tabs/MonitorTab'
-import { useUnits } from '../contexts/UnitsContext'
 
 type Sheet = 'feed' | 'diaper' | 'sleep' | null
 type Tab = 'home' | 'health' | 'vaccines' | 'milestones' | 'monitor'
 
 export default function Home() {
   const { user, logout } = useAuth()
-  const { streamEnabled } = useUnits()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [babies, setBabies] = useState<(Baby & { role: string })[]>([])
@@ -42,7 +40,7 @@ export default function Home() {
     { id: 'health',     icon: '📏', label: 'Health' },
     { id: 'vaccines',   icon: '💉', label: 'Vaccines' },
     { id: 'milestones', icon: '⭐', label: 'Milestones' },
-    ...(streamEnabled ? [{ id: 'monitor' as Tab, icon: '📷', label: 'Monitor' }] : []),
+    { id: 'monitor',    icon: '📷', label: 'Monitor' },
   ]
 
   const loadBabies = useCallback(async () => {
@@ -260,6 +258,12 @@ export default function Home() {
             {tab === 'vaccines' && <VaccinesTab babyId={activeBaby.id} babyDob={activeBaby.dob} />}
             {tab === 'milestones' && <MilestonesTab babyId={activeBaby.id} />}
             {tab === 'monitor' && <MonitorTab />}
+
+            <div className="pt-6 border-t border-stone-100 mt-6">
+              <p className="text-xs text-stone-400 text-center">
+                Babything is for informational and tracking purposes only. It does not provide medical advice, diagnosis, or treatment. Always consult your pediatrician or qualified healthcare provider for medical concerns.
+              </p>
+            </div>
           </main>
         )}
 

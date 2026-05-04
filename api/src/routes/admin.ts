@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { requireAdmin } from '../middleware/admin.js'
 import { sendTestEmail } from '../lib/mailer.js'
 import { AuthRequest } from '../middleware/auth.js'
-import { encryptOptional, decryptOptional } from '../lib/crypto.js'
+import { encryptOptional } from '../lib/crypto.js'
 import { audit } from '../lib/audit.js'
 import { getTenantId } from '../lib/tenant-context.js'
 
@@ -358,18 +358,7 @@ router.post('/seed', ...guard, async (req, res) => {
   res.status(201).json({ ok: true, babyId: bid, babyName: baby.name })
 })
 
-// ── Operator dashboard (cloud only) ───────────────────────
-router.get('/tenants', ...guard, async (_req, res) => {
-  const tenants = await prisma.tenant.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      _count: { select: { users: true, babies: true } },
-    },
-  })
-  res.json(tenants)
-})
-
-// ── Export (self-hosted → cloud migration) ────────────────
+// ── Export (backup) ───────────────────────────────────────
 router.post('/export', ...guard, async (_req, res) => {
   const tenantId = getTenantId()!
   const [users, babies, feedings, diapers, sleepEvents, growthRecords, medications, milestones, appointments, vaccines, settings] = await Promise.all([
@@ -404,7 +393,7 @@ router.post('/export', ...guard, async (_req, res) => {
   })
 })
 
-// ── Import (cloud only) ───────────────────────────────────
+// ── Import (restore) ──────────────────────────────────────
 router.post('/import', ...guard, async (req, res) => {
   const bundle = req.body
   if (!bundle || bundle.version !== 1) {

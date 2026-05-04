@@ -33,7 +33,7 @@ export const api = {
     logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
     me: () => request<User>('/auth/me'),
     invite: (body: { babyId: string; email: string; role?: string }) =>
-      request<{ inviteToken: string; expiresAt: string }>('/auth/invite', { method: 'POST', body: JSON.stringify(body) }),
+      request<{ inviteToken: string; expiresAt: string; emailSent: boolean }>('/auth/invite', { method: 'POST', body: JSON.stringify(body) }),
     getInvite: (token: string) =>
       request<{ babyId: string; babyName: string; email: string; role: string }>(`/auth/invite/${token}`),
     acceptInvite: (token: string) =>
@@ -152,6 +152,20 @@ export const api = {
     get: () => request<AppSettings>('/admin/settings'),
     save: (body: Partial<Pick<AppSettings, 'unitSystem' | 'streamEnabled'>>) =>
       request<AppSettings>('/admin/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  },
+  monitor: {
+    status: () => request<{ connected: boolean; connectedAt?: string }>('/monitor/status'),
+    token: () => request<{ token: string }>('/monitor/token', { method: 'POST' }),
+    config: () => request<{ iceServers: RTCIceServer[] }>('/monitor/config'),
+    watch: () => request<{ watchId: string }>('/monitor/watch', { method: 'POST' }),
+    offer: (watchId: string, sdp: string) =>
+      request<{ ok: boolean }>(`/monitor/watch/${watchId}/offer`, { method: 'POST', body: JSON.stringify({ sdp }) }),
+    pollAnswer: (watchId: string) =>
+      request<{ sdp: string }>(`/monitor/watch/${watchId}/answer`),
+    sendIce: (watchId: string, candidate: RTCIceCandidateInit) =>
+      request<{ ok: boolean }>(`/monitor/watch/${watchId}/ice`, { method: 'POST', body: JSON.stringify({ candidate }) }),
+    pollIce: (watchId: string) =>
+      request<{ candidates: RTCIceCandidateInit[] }>(`/monitor/watch/${watchId}/ice`),
   },
   stats: {
     get: (babyId: string) => request<Stats>(`/babies/${babyId}/stats`),

@@ -12,6 +12,8 @@ async function main() {
     })
     console.log(`Seeded template: ${name}`)
   }
+
+
 }
 
 main()

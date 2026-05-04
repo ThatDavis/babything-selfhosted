@@ -22,6 +22,7 @@ model Tenant {
   users    User[]
   babies   Baby[]
   settings SystemSettings?
+  monitorAgent MonitorAgent?
 }
 
 model User {
@@ -425,9 +426,22 @@ model Plan {
   annualPrice          Int      // price in cents
   stripeMonthlyPriceId String?
   stripeAnnualPriceId  String?
+  annualDiscountPercent Int?    // e.g. 20 means 20% off annual vs monthly*12
   features             String[] @default([])
   isActive             Boolean  @default(true)
   sortOrder            Int      @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+model MonitorAgent {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessionId   String   @unique
+  connectedAt DateTime @default(now())
+  lastPingAt  DateTime @updatedAt
+  status      String   @default("CONNECTED") // CONNECTED | DISCONNECTED
+
+  @@index([tenantId])
 }

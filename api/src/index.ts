@@ -20,6 +20,7 @@ import appointmentsRouter from './routes/appointments.js'
 import vaccinesRouter from './routes/vaccines.js'
 import statsRouter from './routes/stats.js'
 import reportsRouter from './routes/reports.js'
+import monitorRouter, { setupAgentWebSocket } from './routes/monitor.js'
 
 // Validate secrets before booting
 function validateSecrets() {
@@ -93,6 +94,9 @@ app.use('/babies/:babyId/appointments', appointmentsRouter)
 app.use('/babies/:babyId/vaccines', vaccinesRouter)
 app.use('/babies/:babyId/stats', statsRouter)
 app.use('/babies/:babyId', reportsRouter)
+app.use('/monitor', monitorRouter)
 
 const port = Number(process.env.PORT ?? 3001)
+setupAgentWebSocket(httpServer)
+
 httpServer.listen(port, () => console.log(`api listening on :${port}`))
