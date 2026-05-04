@@ -14,7 +14,6 @@ export default function AdminSettings() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [section, setSection] = useState<Section>('general')
-  const isCloud = false
 
   if (!user?.isAdmin) {
     return (
