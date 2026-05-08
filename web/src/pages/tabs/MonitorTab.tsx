@@ -211,6 +211,8 @@ function WebrtcMonitor() {
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const icePollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   const [status, setStatus] = useState<WrtcStatus>('setup')
   const [agentConnected, setAgentConnected] = useState(false)
@@ -220,6 +222,7 @@ function WebrtcMonitor() {
   const [volume, setVolume] = useState(1)
   const [muted, setMuted] = useState(false)
   const [pipActive, setPipActive] = useState(false)
+  const [audioOnly, setAudioOnly] = useState(false)
 
   // Check agent connection status periodically
   useEffect(() => {
@@ -267,6 +270,41 @@ function WebrtcMonitor() {
     }
   }, [])
 
+  // Screen wake lock — keep screen on while monitoring
+  useEffect(() => {
+    async function acquire() {
+      if ('wakeLock' in navigator && status === 'playing') {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen')
+        } catch {
+          // Not supported or denied — silently ignore
+        }
+      }
+    }
+    acquire()
+    return () => {
+      wakeLockRef.current?.release().catch(() => {})
+      wakeLockRef.current = null
+    }
+  }, [status])
+
+  // Re-acquire wake lock when tab becomes visible again
+  useEffect(() => {
+    async function handleVisibilityChange() {
+      if (document.visibilityState === 'visible' && status === 'playing') {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen')
+        } catch {
+          // Silently ignore
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [status])
+
   function cleanupPeerConnection() {
     if (icePollRef.current) {
       clearInterval(icePollRef.current)
@@ -276,6 +314,7 @@ function WebrtcMonitor() {
       pcRef.current.close()
       pcRef.current = null
     }
+    streamRef.current = null
   }
 
   const startStream = useCallback(async () => {
@@ -289,9 +328,15 @@ function WebrtcMonitor() {
       const pc = new RTCPeerConnection({ iceServers: config.iceServers })
       pcRef.current = pc
 
+      const stream = new MediaStream()
+      streamRef.current = stream
+
       pc.ontrack = (event) => {
-        if (videoRef.current && event.streams[0]) {
-          videoRef.current.srcObject = event.streams[0]
+        stream.addTrack(event.track)
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        if (event.track.kind === 'video') {
           setStatus('playing')
         }
       }
@@ -305,8 +350,9 @@ function WebrtcMonitor() {
         }
       }
 
-      // Request video reception
+      // Request video and audio reception
       pc.addTransceiver('video', { direction: 'recvonly' })
+      pc.addTransceiver('audio', { direction: 'recvonly' })
 
       // 2. Create offer
       const offer = await pc.createOffer()
@@ -490,8 +536,20 @@ function WebrtcMonitor() {
 
   return (
     <div className="space-y-4">
+      {/* Mode toggle */}
+      <div className="grid grid-cols-2 gap-2 bg-stone-100 p-1 rounded-2xl">
+        <button onClick={() => setAudioOnly(false)}
+          className={`py-2 rounded-xl text-sm font-semibold transition-colors ${!audioOnly ? 'bg-white shadow-sm' : 'text-stone-500'}`}>
+          📹 Video
+        </button>
+        <button onClick={() => setAudioOnly(true)}
+          className={`py-2 rounded-xl text-sm font-semibold transition-colors ${audioOnly ? 'bg-white shadow-sm' : 'text-stone-500'}`}>
+          🎧 Audio only
+        </button>
+      </div>
+
       {/* Video player */}
-      <div className="relative bg-black rounded-2xl overflow-hidden">
+      <div className={`relative bg-black rounded-2xl overflow-hidden ${audioOnly ? 'hidden' : 'block'}`}>
         <video
           ref={videoRef}
           className="w-full aspect-video"
@@ -505,6 +563,19 @@ function WebrtcMonitor() {
           </div>
         )}
       </div>
+
+      {/* Audio-only card */}
+      {audioOnly && (
+        <div className="card flex flex-col items-center gap-4 py-8">
+          <div className="w-16 h-16 rounded-full bg-brand-100 flex items-center justify-center text-3xl">
+            {status === 'playing' ? '🎵' : status === 'connecting' ? '⏳' : '📵'}
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-stone-700">Audio monitor active</p>
+            <p className="text-xs text-stone-400 mt-1">Keep this screen on for continuous audio</p>
+          </div>
+        </div>
+      )}
 
       {/* Status bar */}
       <div className="flex items-center justify-between px-1">
@@ -530,15 +601,22 @@ function WebrtcMonitor() {
           />
         </div>
 
-        {/* PiP */}
-        <button
-          onClick={togglePiP}
-          className={`w-full py-2 rounded-xl text-sm font-medium border transition-colors ${pipActive ? 'border-brand-400 text-brand-600 bg-brand-50' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}
-        >
-          {pipActive ? 'Exit picture-in-picture' : 'Picture in picture'}
-        </button>
-
+        {/* PiP (video mode only) */}
+        {!audioOnly && (
+          <button
+            onClick={togglePiP}
+            className={`w-full py-2 rounded-xl text-sm font-medium border transition-colors ${pipActive ? 'border-brand-400 text-brand-600 bg-brand-50' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}
+          >
+            {pipActive ? 'Exit picture-in-picture' : 'Picture in picture'}
+          </button>
+        )}
       </div>
+
+      {audioOnly && (
+        <p className="text-xs text-stone-400 text-center px-4">
+          Audio-only mode reduces battery use. On some devices, audio may pause when the screen locks.
+        </p>
+      )}
     </div>
   )
 }
