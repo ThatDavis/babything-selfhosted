@@ -212,8 +212,6 @@ function WebrtcMonitor() {
   const icePollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-
   const [status, setStatus] = useState<WrtcStatus>('setup')
   const [agentConnected, setAgentConnected] = useState(false)
   const [token, setToken] = useState<string | null>(null)
@@ -314,7 +312,6 @@ function WebrtcMonitor() {
       pcRef.current.close()
       pcRef.current = null
     }
-    streamRef.current = null
   }
 
   const startStream = useCallback(async () => {
@@ -328,13 +325,9 @@ function WebrtcMonitor() {
       const pc = new RTCPeerConnection({ iceServers: config.iceServers })
       pcRef.current = pc
 
-      const stream = new MediaStream()
-      streamRef.current = stream
-
       pc.ontrack = (event) => {
-        stream.addTrack(event.track)
         if (videoRef.current) {
-          videoRef.current.srcObject = stream
+          videoRef.current.srcObject = event.streams[0]
         }
         if (event.track.kind === 'video') {
           setStatus('playing')
